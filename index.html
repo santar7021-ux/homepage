@@ -514,12 +514,12 @@ const OS_COLORS = ['#2b7cd3','#d4537e','#7f77dd','#ef9f27','#1D9E75','#b4b2a9'];
 let currentKey = null;
 
 function buildNav() {
-  const allKeys = Object.keys(DB).sort(); // 'YYYY-MM' 형식 → 오름차순 정렬
-  const latest  = allKeys[allKeys.length - 1];
-  const navKeys = allKeys.slice().reverse(); // 최신순: 5월→4월→3월
   const el = document.getElementById('navList');
   if (!el) return;
-  el.innerHTML = navKeys.map(k => `
+  // Object.keys → sort → reverse 로 항상 최신월이 위로
+  const allKeys = Object.keys(DB).sort();          // ['2026-03','2026-04','2026-05']
+  const latest  = allKeys[allKeys.length - 1];
+  el.innerHTML  = allKeys.slice().reverse().map(k => `
     <div class="nav-item ${currentKey===k?'active':''}" onclick="showPage('${k}')">
       <i class="ti ti-calendar-month"></i>${DB[k].label}
       ${k === latest ? '<span class="nav-dot"></span>' : ''}
@@ -527,11 +527,11 @@ function buildNav() {
 }
 
 function sortedKeys() {
-  return Object.keys(DB).sort(); // 오름차순 (내부 로직용)
+  return Object.keys(DB).sort();
 }
 
 function sortedKeysDesc() {
-  return Object.keys(DB).sort().reverse(); // 최신순 (화면 표시용)
+  return Object.keys(DB).sort().reverse();
 }
 
 function showPage(key) {
@@ -572,6 +572,9 @@ function renderMonth(key) {
         ${isPartial ? '' : ''}
         <button onclick="openModal('edit','${key}')" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
           <i class="ti ti-pencil" style="font-size:13px"></i> 데이터 수정
+        </button>
+        <button onclick="deleteMonth('${key}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--red);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--red-light)'" onmouseout="this.style.background='var(--surface)'">
+          <i class="ti ti-trash" style="font-size:13px"></i> 삭제
         </button>
       </div>
     </div>
@@ -907,6 +910,49 @@ function drawPageBar(d, prev) {
   });
   regChart('pageBar', c);
 }
+/* ══════════════════════════════════════
+   삭제
+══════════════════════════════════════ */
+function deleteMonth(key) {
+  const label = DB[key]?.label || key;
+  if (!confirm(`"${label}" 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+  delete DB[key];
+
+  // 삭제 후 가장 최신 월로 이동, 없으면 빈 화면
+  const remaining = sortedKeys();
+  if (remaining.length > 0) {
+    showPage(remaining[remaining.length - 1]);
+  } else {
+    currentKey = null;
+    buildNav();
+    clearCharts();
+    document.getElementById('pageContent').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:12px;color:var(--text-muted)">
+        <i class="ti ti-calendar-off" style="font-size:44px;opacity:.4"></i>
+        <div style="font-size:14px">데이터가 없습니다. 새 월 데이터를 추가하세요.</div>
+      </div>`;
+  }
+
+  deleteFromSheet(key, label);
+}
+
+async function deleteFromSheet(key, label) {
+  try {
+    const res  = await fetch(SHEET_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', key }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '삭제 실패');
+    showToast(`${label} 삭제 완료`);
+  } catch(e) {
+    showToast('시트 삭제 실패: ' + e.message, true);
+  }
+}
+
 /* ══════════════════════════════════════
    MODAL  (추가 & 편집 통합)
 ══════════════════════════════════════ */

@@ -3,253 +3,145 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>소프트힐스 방문자 유입 분석</title>
+<title>소프트힐스 홈페이지 방문 유입 현황</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg: #f4f3f0;
-  --surface: #ffffff;
-  --surface2: #f9f8f6;
-  --border: rgba(0,0,0,0.07);
-  --border-med: rgba(0,0,0,0.12);
-  --text-primary: #181816;
-  --text-secondary: #6b6a66;
-  --text-muted: #a09f9a;
-  --blue: #2b7cd3;
-  --blue-light: #e8f2fc;
-  --green: #16906a;
-  --green-light: #e0f5ed;
-  --red: #c0392b;
-  --red-light: #fdecea;
-  --amber: #d97706;
-  --amber-light: #fef3e2;
-  --purple: #6d5ae0;
-  --sidebar-w: 216px;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f3f0;--surface:#fff;--surface2:#f9f8f6;
+  --border:rgba(0,0,0,.07);--border-med:rgba(0,0,0,.12);
+  --text-primary:#181816;--text-secondary:#6b6a66;--text-muted:#a09f9a;
+  --blue:#2b7cd3;--blue-light:#e8f2fc;
+  --green:#16906a;--green-light:#e0f5ed;
+  --red:#c0392b;--red-light:#fdecea;
+  --amber:#d97706;--purple:#6d5ae0;
+  --sidebar-w:216px;
 }
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:10px}
 
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.logo{padding:22px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-mark{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+.logo-icon{width:28px;height:28px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-icon i{font-size:15px;color:#fff}
+.logo-name{font-size:13px;font-weight:700;letter-spacing:-.2px}
+.logo-sub{font-size:11px;color:var(--text-muted);margin-left:37px}
+.nav-label{padding:16px 16px 5px;font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;margin:1px 8px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text-secondary);transition:background .12s,color .12s;user-select:none}
+.nav-item:hover{background:var(--bg)}
+.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:600}
+.nav-item i{font-size:15px;flex-shrink:0;opacity:.7}
+.nav-item.active i{opacity:1}
+.nav-dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--green)}
+.sidebar-footer{margin-top:auto;padding:12px 10px 16px;border-top:1px solid var(--border)}
+.add-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 12px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.add-btn:hover{background:#1e6bbf}
+.add-btn i{font-size:15px}
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 10px; }
+/* MAIN */
+.main{margin-left:var(--sidebar-w);padding:28px 30px 60px;max-width:calc(100vw - var(--sidebar-w))}
+.page-header{margin-bottom:22px}
+.page-title{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.page-meta{font-size:13px;color:var(--text-secondary);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.meta-sep{color:var(--text-muted)}
 
-/* ══════════════ SIDEBAR ══════════════ */
-.sidebar {
-  position: fixed; top: 0; left: 0;
-  width: var(--sidebar-w); height: 100vh;
-  background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; z-index: 100; overflow-y: auto;
-}
-.logo {
-  padding: 22px 18px 16px;
-  border-bottom: 1px solid var(--border);
-}
-.logo-mark {
-  display: flex; align-items: center; gap: 9px; margin-bottom: 2px;
-}
-.logo-icon {
-  width: 28px; height: 28px; background: var(--blue); border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-}
-.logo-icon i { font-size: 15px; color: #fff; }
-.logo-name { font-size: 13px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
-.logo-sub { font-size: 11px; color: var(--text-muted); margin-left: 37px; }
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:11px 11px 0 0}
+.kpi.blue::before{background:var(--blue)}.kpi.green::before{background:var(--green)}
+.kpi.amber::before{background:var(--amber)}.kpi.purple::before{background:var(--purple)}
+.kpi-label{font-size:11.5px;color:var(--text-secondary);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.kpi-label i{font-size:14px}
+.kpi-value{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.kpi-sub{font-size:11.5px;margin-top:6px;display:flex;align-items:center;gap:3px}
+.up{color:var(--green)}.dn{color:var(--red)}.muted{color:var(--text-muted)}
 
-.nav-group-label {
-  padding: 16px 16px 5px;
-  font-size: 10px; font-weight: 600;
-  color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase;
-}
-.nav-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px; margin: 1px 8px;
-  border-radius: 7px; cursor: pointer;
-  font-size: 13px; color: var(--text-secondary);
-  transition: background .12s, color .12s;
-  user-select: none;
-}
-.nav-item:hover { background: var(--bg); color: var(--text-primary); }
-.nav-item.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
-.nav-item i { font-size: 15px; flex-shrink: 0; opacity: .7; }
-.nav-item.active i { opacity: 1; }
-.nav-dot { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:6px}
+.card-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.card-title i{font-size:15px;color:var(--text-muted)}
+.card-note{font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:14px}
+.g1{margin-bottom:14px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--text-secondary);margin-bottom:10px}
+.ldot{width:8px;height:8px;border-radius:2px;display:inline-block;flex-shrink:0;vertical-align:middle;margin-right:4px}
 
-.sidebar-footer { margin-top: auto; padding: 12px 10px 16px; border-top: 1px solid var(--border); }
-.add-btn {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 8px 12px;
-  background: var(--blue); color: #fff;
-  border: none; border-radius: 8px;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  transition: background .15s;
-}
-.add-btn:hover { background: #1e6bbf; }
-.add-btn i { font-size: 15px; }
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:11px;font-weight:600;color:var(--text-muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border-med);white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface2)}
+.tbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap}
+.b-up{background:var(--green-light);color:var(--green)}
+.b-dn{background:var(--red-light);color:var(--red)}
+.b-nt{background:var(--bg);color:var(--text-secondary)}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px;width:fit-content}
+.tab{font-size:12px;font-weight:500;padding:5px 14px;border:none;background:transparent;border-radius:6px;color:var(--text-secondary);cursor:pointer;transition:all .12s}
+.tab.active{background:var(--surface);color:var(--text-primary);box-shadow:0 1px 3px rgba(0,0,0,.1)}
 
-/* ══════════════ MAIN ══════════════ */
-.main { margin-left: var(--sidebar-w); padding: 28px 30px 60px; max-width: calc(100vw - var(--sidebar-w)); }
+/* DONUT */
+.donut-wrap{display:flex;align-items:center;gap:16px}
+.donut-canvas{position:relative;flex-shrink:0}
+.donut-canvas canvas{display:block}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.donut-center-val{font-size:18px;font-weight:700;line-height:1}
+.donut-center-lbl{font-size:10px;color:var(--text-muted);margin-top:3px}
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:7px;font-size:12px}
+.donut-row{display:flex;align-items:center;gap:7px}
+.donut-row-bar{flex:1;height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.donut-row-fill{height:100%;border-radius:2px}
+.donut-row-pct{font-size:11px;color:var(--text-secondary);min-width:32px;text-align:right}
+.donut-row-name{color:var(--text-primary);min-width:80px}
 
-.page-header { margin-bottom: 22px; }
-.page-title { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
-.page-meta { font-size: 13px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 8px; }
-.meta-sep { color: var(--text-muted); }
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:26px 28px;width:min(640px,95vw);margin-bottom:40px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);line-height:1;padding:2px}
+.modal-close:hover{color:var(--text-primary)}
+.edit-banner{background:var(--blue-light);border:1px solid rgba(43,124,211,.2);border-radius:8px;padding:9px 14px;margin-bottom:16px;font-size:12.5px;color:var(--blue);display:flex;align-items:center;gap:7px}
+.fsec{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.07em;text-transform:uppercase;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.fgroup{display:flex;flex-direction:column;gap:4px}
+.flabel{font-size:11.5px;font-weight:500;color:var(--text-secondary)}
+.finput{padding:8px 11px;border:1px solid var(--border-med);border-radius:7px;font-size:13px;color:var(--text-primary);background:var(--surface);outline:none;transition:border-color .15s;width:100%}
+.finput:focus{border-color:var(--blue)}
+.finput.we{border-color:rgba(200,80,50,.3)}
+.daily-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.daily-cell{display:flex;flex-direction:column;gap:2px}
+.daily-cell label{font-size:10px;text-align:center;color:var(--text-muted)}
+.daily-cell input{padding:5px 3px;border:1px solid var(--border-med);border-radius:5px;font-size:11px;text-align:center;width:100%;outline:none}
+.daily-cell input:focus{border-color:var(--blue)}
+.btn-row{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+.btn-primary{padding:9px 22px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:#1e6bbf}
+.btn-ghost{padding:9px 18px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-med);border-radius:8px;font-size:13px;cursor:pointer}
 
-/* ══════════════ KPI GRID ══════════════ */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-.kpi {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 11px; padding: 16px 18px;
-  position: relative; overflow: hidden;
-}
-.kpi::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0;
-  height: 3px; border-radius: 11px 11px 0 0;
-}
-.kpi.blue::before { background: var(--blue); }
-.kpi.green::before { background: var(--green); }
-.kpi.amber::before { background: var(--amber); }
-.kpi.purple::before { background: var(--purple); }
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);padding:10px 22px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-.kpi-label { font-size: 11.5px; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-.kpi-label i { font-size: 14px; }
-.kpi-value { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; color: var(--text-primary); }
-.kpi-sub { font-size: 11.5px; margin-top: 6px; display: flex; align-items: center; gap: 3px; }
-.up { color: var(--green); }
-.dn { color: var(--red); }
-.muted { color: var(--text-muted); }
+/* SPIN */
+@keyframes _spin{to{transform:rotate(360deg)}}
 
-/* ══════════════ CARDS ══════════════ */
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 18px 20px;
-}
-.card-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 14px;
-}
-.card-title {
-  font-size: 13px; font-weight: 600; color: var(--text-primary);
-  display: flex; align-items: center; gap: 6px;
-}
-.card-title i { font-size: 15px; color: var(--text-muted); }
-.card-note { font-size: 11px; color: var(--text-muted); }
-
-/* ══════════════ GRID LAYOUTS ══════════════ */
-.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-.g3 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 14px; }
-.g1 { margin-bottom: 14px; }
-
-/* ══════════════ LEGEND ══════════════ */
-.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 10px; }
-.ldot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; vertical-align: middle; margin-right: 4px; }
-
-/* ══════════════ TABLE ══════════════ */
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th {
-  font-size: 11px; font-weight: 600; color: var(--text-muted);
-  text-align: left; padding: 6px 10px;
-  border-bottom: 1px solid var(--border-med);
-  white-space: nowrap;
-}
-.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.tbl tr:last-child td { border-bottom: none; }
-.tbl tr:hover td { background: var(--surface2); }
-.tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.tbl td.muted { color: var(--text-secondary); font-size: 11px; }
-
-.badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 5px; font-weight: 600; white-space: nowrap; }
-.b-up { background: var(--green-light); color: var(--green); }
-.b-dn { background: var(--red-light); color: var(--red); }
-.b-nt { background: var(--bg); color: var(--text-secondary); }
-
-/* ══════════════ TABS ══════════════ */
-.tabs { display: flex; gap: 4px; margin-bottom: 14px; background: var(--bg); border-radius: 8px; padding: 3px; width: fit-content; }
-.tab {
-  font-size: 12px; font-weight: 500; padding: 5px 14px;
-  border: none; background: transparent; border-radius: 6px;
-  color: var(--text-secondary); cursor: pointer; transition: all .12s;
-}
-.tab.active { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-
-/* ══════════════ DIVIDER ══════════════ */
-.divider { height: 1px; background: var(--border); margin: 16px 0; }
-
-/* ══════════════ OS DONUT WRAPPER ══════════════ */
-.donut-wrap { display: flex; align-items: center; gap: 16px; }
-.donut-canvas { position: relative; flex-shrink: 0; }
-.donut-canvas canvas { display: block; }
-.donut-center {
-  position: absolute; inset: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  pointer-events: none;
-}
-.donut-center-val { font-size: 18px; font-weight: 700; color: var(--text-primary); line-height: 1; }
-.donut-center-lbl { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 7px; font-size: 12px; }
-.donut-row { display: flex; align-items: center; gap: 7px; }
-.donut-row-bar { flex: 1; height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
-.donut-row-fill { height: 100%; border-radius: 2px; transition: width .4s; }
-.donut-row-pct { font-size: 11px; color: var(--text-secondary); min-width: 32px; text-align: right; }
-.donut-row-name { color: var(--text-primary); min-width: 80px; }
-
-/* ══════════════ MODAL ══════════════ */
-.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 300; align-items: flex-start; justify-content: center; padding-top: 40px; overflow-y: auto; }
-.overlay.open { display: flex; }
-.modal {
-  background: var(--surface); border-radius: 14px; padding: 26px 28px;
-  width: min(640px, 95vw); margin-bottom: 40px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.15);
-}
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.modal-title { font-size: 16px; font-weight: 700; }
-.modal-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-muted); line-height: 1; padding: 2px; }
-.modal-close:hover { color: var(--text-primary); }
-.fsec { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: .07em; text-transform: uppercase; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
-.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fg3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.fgroup { display: flex; flex-direction: column; gap: 4px; }
-.flabel { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); }
-.finput {
-  padding: 8px 11px; border: 1px solid var(--border-med);
-  border-radius: 7px; font-size: 13px; color: var(--text-primary);
-  background: var(--surface); outline: none; transition: border-color .15s;
-  width: 100%;
-}
-.finput:focus { border-color: var(--blue); }
-.finput.we { border-color: rgba(200,80,50,.3); }
-
-.daily-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.daily-cell { display: flex; flex-direction: column; gap: 2px; }
-.daily-cell label { font-size: 10px; text-align: center; color: var(--text-muted); }
-.daily-cell input { padding: 5px 3px; border: 1px solid var(--border-med); border-radius: 5px; font-size: 11px; text-align: center; width: 100%; outline: none; }
-.daily-cell input:focus { border-color: var(--blue); }
-
-.btn-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
-.btn-primary { padding: 9px 22px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
-.btn-primary:hover { background: #1e6bbf; }
-.btn-ghost { padding: 9px 18px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-med); border-radius: 8px; font-size: 13px; cursor: pointer; }
-
-/* ══════════════ TREND CHARTS ══════════════ */
-.trend-full { margin-bottom: 14px; }
-
-/* ══════════════ RESPONSIVE ══════════════ */
-@media (max-width: 960px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) {
-  .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; overflow-x: auto; }
-  .main { margin-left: 0; padding: 14px; }
-  .g2, .g3 { grid-template-columns: 1fr; }
-  .fg2, .fg3 { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-}
+@media(max-width:960px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.sidebar{width:100%;height:auto;position:relative}.main{margin-left:0;padding:14px}.g2,.g3{grid-template-columns:1fr}.fg2,.fg3{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<!-- ── Sidebar ── -->
 <nav class="sidebar">
   <div class="logo">
     <div class="logo-mark">
@@ -258,36 +150,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
     </div>
     <div class="logo-sub">홈페이지 방문 유입 현황</div>
   </div>
-
-  <div class="nav-group-label">월별 리포트</div>
+  <div class="nav-label">월별 리포트</div>
   <div id="navList"></div>
-
-
-
   <div class="sidebar-footer">
-    <button class="add-btn" onclick="openModal('add')">
-      <i class="ti ti-plus"></i> 새 월 데이터 추가
-    </button>
+    <button class="add-btn" onclick="openModal()"><i class="ti ti-plus"></i> 새 월 데이터 추가</button>
   </div>
 </nav>
 
-<!-- ── Main ── -->
-<main class="main">
-  <div id="pageContent"></div>
-</main>
+<main class="main"><div id="pageContent"></div></main>
 
-<!-- ── Modal ── -->
+<!-- Modal -->
 <div class="overlay" id="addModal">
   <div class="modal">
     <div class="modal-head">
       <div class="modal-title" id="modalTitle">새 월 데이터 추가</div>
       <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
-    <div id="editModeBanner" style="display:none;background:var(--blue-light);border:1px solid rgba(43,124,211,.2);border-radius:8px;padding:9px 14px;margin-bottom:16px;font-size:12.5px;color:var(--blue);display:none;align-items:center;gap:7px">
-      <i class="ti ti-pencil" style="font-size:14px"></i>
-      <span id="editModeBannerText"></span>
+    <div id="editBanner" style="display:none" class="edit-banner">
+      <i class="ti ti-pencil" style="font-size:14px;flex-shrink:0"></i>
+      <span id="editBannerText"></span>
     </div>
-
     <div class="fsec">기본 정보</div>
     <div class="fg3">
       <div class="fgroup"><label class="flabel">연도</label><input class="finput" id="f-year" type="number" value="2026" min="2020" max="2035"></div>
@@ -298,7 +180,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
       <div class="fgroup"><label class="flabel">총 방문자 수</label><input class="finput" id="f-total" type="number" placeholder="예: 15000"></div>
       <div class="fgroup"><label class="flabel">네이버 SEO 지수</label><input class="finput" id="f-seo" type="number" placeholder="예: 8500"></div>
     </div>
-
     <div class="fsec">OS별 방문자 수</div>
     <div class="fg3">
       <div class="fgroup"><label class="flabel">Windows</label><input class="finput" id="f-win" type="number" placeholder="0"></div>
@@ -308,8 +189,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
       <div class="fgroup"><label class="flabel">Linux</label><input class="finput" id="f-linux" type="number" placeholder="0"></div>
       <div class="fgroup"><label class="flabel">Unknown</label><input class="finput" id="f-unk" type="number" placeholder="0"></div>
     </div>
-
-    <div class="fsec">유입 페이지별 방문자 수 <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted)">(광고홍보)</span></div>
+    <div class="fsec">유입 페이지 <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted)">(광고홍보)</span></div>
     <div class="fg3">
       <div class="fgroup"><label class="flabel">메인페이지</label><input class="finput" id="p-main" type="number" placeholder="0"></div>
       <div class="fgroup"><label class="flabel">연혁</label><input class="finput" id="p-hist" type="number" placeholder="0"></div>
@@ -317,8 +197,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
       <div class="fgroup"><label class="flabel">회사소개</label><input class="finput" id="p-about" type="number" placeholder="0"></div>
       <div class="fgroup"><label class="flabel">자사 제품소개</label><input class="finput" id="p-prod" type="number" placeholder="0"></div>
     </div>
-
-    <div class="fsec" style="margin-top:14px">유입 페이지별 방문자 수 <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted)">(CRM)</span></div>
+    <div class="fsec" style="margin-top:14px">유입 페이지 <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted)">(CRM)</span></div>
     <div class="fg3">
       <div class="fgroup"><label class="flabel">장바구니</label><input class="finput" id="p-cart" type="number" placeholder="0"></div>
       <div class="fgroup"><label class="flabel">회원가입</label><input class="finput" id="p-signup" type="number" placeholder="0"></div>
@@ -329,10 +208,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
       <div class="fgroup"><label class="flabel">FAQ</label><input class="finput" id="p-faq" type="number" placeholder="0"></div>
       <div class="fgroup"><label class="flabel">시스템 요구사항</label><input class="finput" id="p-sys" type="number" placeholder="0"></div>
     </div>
-
     <div class="fsec">일별 방문자 수</div>
     <div id="dailyInputGrid" class="daily-grid"></div>
-
     <div class="btn-row">
       <button class="btn-ghost" onclick="closeModal()">취소</button>
       <button class="btn-primary" onclick="saveMonth()">저장</button>
@@ -340,76 +217,50 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
+'use strict';
+
 /* ══════════════════════════════════════
-   DATA
+   설정
 ══════════════════════════════════════ */
-/* ═══════════════════════════════════════════
-   구글 시트 연동 설정
-═══════════════════════════════════════════ */
 const SHEET_API = 'https://script.google.com/macros/s/AKfycbxTMqWv629a-6_dFyUzN66pqdksh3RxTopWcTQpKy8HAjUtBpGRGvpCT-BMmBqSJIn-/exec';
 
-let DB = {};  // 시트에서 로드 후 채워짐
+/* ══════════════════════════════════════
+   DB (시트에서 로드)
+══════════════════════════════════════ */
+let DB = {};
 
-/* ── 시트 행 → DB 객체 변환 (타입 엄격 변환) ── */
-function rowToDB(row) {
-  const arr = f => {
-    if (Array.isArray(f)) return f;
-    try { return JSON.parse(f || '[]'); } catch(e) { return []; }
-  };
+// 시트 행 → DB 엔트리
+function rowToDB(r) {
+  const arr = f => { try { return JSON.parse(f||'[]'); } catch(e) { return []; } };
   return {
-    label:    String(row.label   || ''),
-    year:     Number(row.year)   || 0,
-    month:    Number(row.month)  || 0,
-    period:   String(row.period  || ''),
-    bizDays:  Number(row.bizDays)|| 0,
-    total:    Number(row.total)  || 0,
-    prevTotal:Number(row.prevTotal)||0,
-    seo:      Number(row.seo)    || 0,
-    prevSeo:  Number(row.prevSeo)|| 0,
-    partial:  row.partial === true || String(row.partial).toUpperCase() === 'TRUE',
-    os: {
-      windows: Number(row.win)     || 0,
-      mac:     Number(row.mac)     || 0,
-      android: Number(row.android) || 0,
-      ios:     Number(row.ios)     || 0,
-      linux:   Number(row.linux)   || 0,
-      unknown: Number(row.unknown) || 0,
-    },
-    daily: {
-      dates: arr(row.daily_dates).map(Number),
-      days:  arr(row.daily_days).map(String),
-      v:     arr(row.daily_v).map(Number),
-    },
-    pages: arr(row.pages_json).map(p => ({
-      g:    String(p.g    || 'crm'),
-      name: String(p.name || ''),
-      v:    Number(p.v)   || 0,
-    })),
+    label:    String(r.label||''),
+    year:     +r.year||0,  month:    +r.month||0,
+    period:   String(r.period||''),
+    bizDays:  +r.bizDays||0,
+    total:    +r.total||0,  seo: +r.seo||0,
+    os:{ windows:+r.win||0, mac:+r.mac||0, android:+r.android||0,
+         ios:+r.ios||0,     linux:+r.linux||0, unknown:+r.unknown||0 },
+    daily:{ dates: arr(r.daily_dates).map(Number),
+            days:  arr(r.daily_days).map(String),
+            v:     arr(r.daily_v).map(Number) },
+    pages: arr(r.pages_json).map(p=>({ g:String(p.g||'crm'), name:String(p.name||''), v:+p.v||0 })),
   };
 }
 
-/* ── DB 객체 → 시트 저장용 payload ── */
+// DB 엔트리 → 시트 저장 payload
 function dbToPayload(key) {
   const d = DB[key];
   return {
     key,
-    label:      d.label,
-    year:       d.year,
-    month:      d.month,
-    period:     d.period,
-    bizDays:    d.bizDays,
-    total:      d.total,
-    prevTotal:  d.prevTotal,
-    seo:        d.seo,
-    prevSeo:    d.prevSeo,
-    partial:    d.partial ? 'true' : '',
-    win:        d.os.windows,
-    mac:        d.os.mac,
-    android:    d.os.android,
-    ios:        d.os.ios,
-    linux:      d.os.linux,
-    unknown:    d.os.unknown,
+    label: d.label, year: d.year, month: d.month,
+    period: d.period, bizDays: d.bizDays,
+    total: d.total, prevTotal: prevOf(key)?.total||0,
+    seo: d.seo,     prevSeo:   prevOf(key)?.seo||0,
+    win: d.os.windows, mac: d.os.mac, android: d.os.android,
+    ios: d.os.ios,     linux: d.os.linux, unknown: d.os.unknown,
     daily_dates: d.daily.dates,
     daily_days:  d.daily.days,
     daily_v:     d.daily.v,
@@ -417,122 +268,93 @@ function dbToPayload(key) {
   };
 }
 
-/* ── 시트에서 전체 데이터 로드 ── */
+// 직전 월 DB 엔트리 반환 (없으면 null)
+function prevOf(key) {
+  const keys = sortedKeys();
+  const idx  = keys.indexOf(key);
+  return idx > 0 ? DB[keys[idx-1]] : null;
+}
+
+/* ══════════════════════════════════════
+   시트 I/O
+══════════════════════════════════════ */
 async function loadFromSheet() {
   const res  = await fetch(SHEET_API + '?action=read');
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || '읽기 실패');
   DB = {};
-  Object.entries(json.data).forEach(([key, row]) => {
-    DB[key] = rowToDB(row);
-  });
-  if (Object.keys(DB).length === 0) throw new Error('시트에 데이터가 없습니다');
+  Object.entries(json.data).forEach(([k, r]) => { DB[k] = rowToDB(r); });
+  if (!Object.keys(DB).length) throw new Error('시트에 데이터가 없습니다');
 }
 
-/* ── 시트에 단일 행 저장 (최대 3회 재시도) ── */
 async function saveToSheet(key) {
-  const payload = dbToPayload(key);
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch(SHEET_API, {
-        method: 'POST',
-        // text/plain → preflight(OPTIONS) 없이 바로 전송 (Apps Script CORS 호환)
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.error || '저장 실패');
-      showToast('✓ ' + DB[key].label + ' 저장 완료');
-      return true;
-    } catch(e) {
-      if (attempt === 3) {
-        showToast('저장 실패: ' + e.message, true);
-        return false;
-      }
-      await new Promise(r => setTimeout(r, 800 * attempt));
-    }
-  }
+  try {
+    const res  = await fetch(SHEET_API, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(dbToPayload(key)),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '저장 실패');
+    showToast('✓ ' + DB[key].label + ' 저장 완료');
+  } catch(e) { showToast('저장 실패: ' + e.message, true); }
 }
 
-/* ── 토스트 알림 ── */
-function showToast(msg, isError = false) {
-  let t = document.getElementById('_toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = '_toast';
-    t.style.cssText = [
-      'position:fixed','bottom:24px','left:50%',
-      'transform:translateX(-50%) translateY(20px)',
-      'padding:10px 22px','border-radius:10px',
-      'font-size:13px','font-weight:500',
-      'z-index:9999','opacity:0',
-      'transition:all .3s','pointer-events:none',
-      'white-space:nowrap','color:#fff',
-      'box-shadow:0 4px 16px rgba(0,0,0,.2)',
-    ].join(';');
-    document.body.appendChild(t);
-  }
-  t.style.background = isError ? '#c0392b' : '#1a1a18';
-  t.textContent = msg;
-  t.style.opacity = '1';
-  t.style.transform = 'translateX(-50%) translateY(0)';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => {
-    t.style.opacity = '0';
-    t.style.transform = 'translateX(-50%) translateY(20px)';
-  }, isError ? 5000 : 3000);
+async function deleteFromSheet(key) {
+  try {
+    const res  = await fetch(SHEET_API, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'delete', key }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '삭제 실패');
+  } catch(e) { showToast('시트 삭제 실패: ' + e.message, true); }
 }
 
 /* ══════════════════════════════════════
+   유틸
+══════════════════════════════════════ */
+const comma   = v => Number(v).toLocaleString();
+const K       = v => v >= 1000 ? (v/1000).toFixed(0) + 'K' : v;
+const pct     = (a,b) => b > 0 ? ((a-b)/b*100).toFixed(1) : null;
+const gv      = id => { const e = document.getElementById(id); return e ? (parseInt(e.value)||0) : 0; };
+const sv      = (id,v) => { const e = document.getElementById(id); if(e) e.value = (v!==undefined&&v!==null)?v:''; };
 
-   CHART REGISTRY
+function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+function dayName(y,m,d){ return ['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()]; }
+
+// key 오름차순 (내부 로직용)
+function sortedKeys(){ return Object.keys(DB).sort(); }
+
+/* ══════════════════════════════════════
+   차트
 ══════════════════════════════════════ */
 const CHARTS = {};
-function regChart(id, inst) { CHARTS[id] = inst; }
-function clearCharts() { Object.values(CHARTS).forEach(c => { try { c.destroy(); } catch(e){} }); Object.keys(CHARTS).forEach(k => delete CHARTS[k]); }
-
-/* ══════════════════════════════════════
-   HELPERS
-══════════════════════════════════════ */
-const K = v => v >= 1000 ? (v/1000).toFixed(1).replace(/\.0$/,'') + 'K' : String(v);
-const comma = v => Number(v).toLocaleString();
-const pct = (a, b) => b > 0 ? ((a - b) / b * 100).toFixed(1) : null;
-const sign = v => v >= 0 ? '+' : '';
-const arrow = v => v >= 0 ? '↑' : '↓';
-const updn = v => v >= 0 ? 'up' : 'dn';
-const daysInMonth = (y, m) => new Date(y, m, 0).getDate();
-const dayName = (y, m, d) => ['일','월','화','수','목','금','토'][new Date(y, m-1, d).getDay()];
+function regChart(id, c){ CHARTS[id] = c; }
+function clearCharts(){ Object.values(CHARTS).forEach(c=>{ try{c.destroy();}catch(e){} }); for(const k in CHARTS) delete CHARTS[k]; }
 
 const OS_KEYS   = ['windows','mac','android','ios','linux','unknown'];
 const OS_LABELS = ['Windows','Macintosh','Android','iOS','Linux','Unknown'];
 const OS_COLORS = ['#2b7cd3','#d4537e','#7f77dd','#ef9f27','#1D9E75','#b4b2a9'];
 
 /* ══════════════════════════════════════
-   NAVIGATION
+   내비게이션
 ══════════════════════════════════════ */
 let currentKey = null;
 
 function buildNav() {
   const el = document.getElementById('navList');
   if (!el) return;
-  // Object.keys → sort → reverse 로 항상 최신월이 위로
-  const allKeys = Object.keys(DB).sort();          // ['2026-03','2026-04','2026-05']
-  const latest  = allKeys[allKeys.length - 1];
-  el.innerHTML  = allKeys.slice().reverse().map(k => `
+  const keys   = sortedKeys();
+  const latest = keys[keys.length - 1];
+  // 화면에는 최신순 (역순)
+  el.innerHTML = keys.slice().reverse().map(k => `
     <div class="nav-item ${currentKey===k?'active':''}" onclick="showPage('${k}')">
       <i class="ti ti-calendar-month"></i>${DB[k].label}
-      ${k === latest ? '<span class="nav-dot"></span>' : ''}
+      ${k===latest?'<span class="nav-dot"></span>':''}
     </div>`).join('');
-}
-
-function sortedKeys() {
-  return Object.keys(DB).sort();
-}
-
-function sortedKeysDesc() {
-  return Object.keys(DB).sort().reverse();
 }
 
 function showPage(key) {
@@ -540,29 +362,21 @@ function showPage(key) {
   buildNav();
   clearCharts();
   document.getElementById('pageContent').innerHTML = '';
-  if (key === 'visitor') return;
-  else if (key === 'trend') return;
-  else renderMonth(key);
+  renderMonth(key);
 }
 
 /* ══════════════════════════════════════
-   MONTH PAGE
+   월별 리포트
 ══════════════════════════════════════ */
 function renderMonth(key) {
-  const d = DB[key];
-  const keys = sortedKeys();
-  const idx = keys.indexOf(key);
-  const prev = idx > 0 ? DB[keys[idx-1]] : null;
-
-  const gPct = pct(d.total, d.prevTotal);
-  const collectedDays = d.daily.dates.length;           // 실제 수집된 일수
-  const avgD  = d.bizDays > 0 ? Math.round(d.total / d.bizDays) : 0;  // 영업일 기준 (엑셀 기준)
-  const avgAll = collectedDays > 0 ? Math.round(d.total / collectedDays) : 0; // 수집일 기준
-  const peak  = Math.max(...d.daily.v);
+  const d    = DB[key];
+  const prev = prevOf(key);   // 직전 월 (DB live 기준)
+  const gPct = pct(d.total, prev?.total||0);
+  const avgD = d.bizDays > 0 ? Math.round(d.total / d.bizDays) : 0;
+  const peak = d.daily.v.length ? Math.max(...d.daily.v) : 0;
   const peakDay = d.daily.dates[d.daily.v.indexOf(peak)];
-  const seoPct  = d.prevSeo > 0 ? (d.seo / d.prevSeo).toFixed(2) : null;
-  const osTotal = OS_KEYS.reduce((a,k) => a + (d.os[k]||0), 0);
-  const isPartial = d.partial === true;
+  const seoPct  = prev?.seo > 0 && d.seo > 0 ? (d.seo / prev.seo).toFixed(2) : null;
+  const osTotal = OS_KEYS.reduce((s,k) => s + (d.os[k]||0), 0);
 
   document.getElementById('pageContent').innerHTML = `
     <div class="page-header">
@@ -570,24 +384,22 @@ function renderMonth(key) {
       <div class="page-meta">
         <i class="ti ti-calendar" style="font-size:13px;opacity:.5"></i>${d.period}
         <span class="meta-sep">·</span>영업일 ${d.bizDays}일
-        ${isPartial ? '' : ''}
-        <button onclick="openModal('edit','${key}')" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+        <button onclick="openModal('${key}')" style="margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--text-secondary);cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
           <i class="ti ti-pencil" style="font-size:13px"></i> 데이터 수정
         </button>
-        <button onclick="deleteMonth('${key}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--red);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--red-light)'" onmouseout="this.style.background='var(--surface)'">
+        <button onclick="deleteMonth('${key}')" style="display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--surface);border:1px solid var(--border-med);border-radius:7px;font-size:12px;color:var(--red);cursor:pointer" onmouseover="this.style.background='var(--red-light)'" onmouseout="this.style.background='var(--surface)'">
           <i class="ti ti-trash" style="font-size:13px"></i> 삭제
         </button>
       </div>
     </div>
-    
 
     <div class="kpi-grid">
       <div class="kpi blue">
         <div class="kpi-label"><i class="ti ti-users"></i>총 방문자</div>
         <div class="kpi-value">${comma(d.total)}</div>
         ${gPct !== null
-          ? `<div class="kpi-sub ${updn(gPct)}"><i class="ti ti-arrow-${Number(gPct)>=0?'up':'down'}"></i>전월 대비 ${sign(gPct)}${gPct}%</div>`
-          : '<div class="kpi-sub muted">전월 데이터 없음</div>'}
+          ? `<div class="kpi-sub ${+gPct>=0?'up':'dn'}"><i class="ti ti-arrow-${+gPct>=0?'up':'down'}"></i>전월 대비 ${+gPct>=0?'+':''}${gPct}%</div>`
+          : `<div class="kpi-sub muted">전월 데이터 없음</div>`}
       </div>
       <div class="kpi green">
         <div class="kpi-label"><i class="ti ti-calendar-stats"></i>일 평균 방문</div>
@@ -602,7 +414,7 @@ function renderMonth(key) {
       <div class="kpi purple">
         <div class="kpi-label"><i class="ti ti-search"></i>네이버 SEO 지수</div>
         <div class="kpi-value">${d.seo > 0 ? comma(d.seo) : '<span style="font-size:16px;color:var(--text-muted)">미수집</span>'}</div>
-        ${d.seo > 0 && seoPct ? `<div class="kpi-sub up"><i class="ti ti-arrow-up"></i>전월 대비 ×${seoPct}</div>` : '<div class="kpi-sub muted">-</div>'}
+        ${seoPct ? `<div class="kpi-sub up"><i class="ti ti-arrow-up"></i>전월 대비 ×${seoPct}</div>` : '<div class="kpi-sub muted">-</div>'}
       </div>
     </div>
 
@@ -611,21 +423,16 @@ function renderMonth(key) {
         <div class="card-head">
           <div class="card-title"><i class="ti ti-chart-bar"></i>일별 방문자 수</div>
           <div class="card-note">
-            <span style="display:inline-block;width:8px;height:8px;background:#2b7cd3;border-radius:2px;vertical-align:middle;margin-right:3px"></span>평일
-            &nbsp;
-            <span style="display:inline-block;width:8px;height:8px;background:#4fa8e8;border-radius:2px;vertical-align:middle;margin-right:3px"></span>토
-            &nbsp;
-            <span style="display:inline-block;width:8px;height:8px;background:#e05252;border-radius:2px;vertical-align:middle;margin-right:3px"></span>일
-            &nbsp;
-            <span style="display:inline-block;width:12px;height:2px;background:#ef9f27;vertical-align:middle;border-radius:1px;margin-right:3px"></span>평균
+            <span><span style="display:inline-block;width:8px;height:8px;background:#2b7cd3;border-radius:2px;vertical-align:middle"></span> 평일</span>
+            <span><span style="display:inline-block;width:8px;height:8px;background:#4fa8e8;border-radius:2px;vertical-align:middle"></span> 토</span>
+            <span><span style="display:inline-block;width:8px;height:8px;background:#e05252;border-radius:2px;vertical-align:middle"></span> 일</span>
+            <span><span style="display:inline-block;width:12px;height:2px;background:#ef9f27;vertical-align:middle;border-radius:1px"></span> 평균</span>
           </div>
         </div>
         <div style="position:relative;width:100%;height:240px"><canvas id="cDaily"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-head">
-          <div class="card-title"><i class="ti ti-devices"></i>접속 OS 분포</div>
-        </div>
+        <div class="card-head"><div class="card-title"><i class="ti ti-devices"></i>접속 OS 분포</div></div>
         <div class="donut-wrap">
           <div class="donut-canvas" style="width:140px;height:140px">
             <canvas id="cOs" width="140" height="140"></canvas>
@@ -644,20 +451,14 @@ function renderMonth(key) {
       <div class="card">
         <div class="card-head">
           <div class="card-title"><i class="ti ti-arrows-exchange"></i>OS 전월 비교</div>
-          <div class="legend">
-            <span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span>
-            <span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span>
-          </div>
+          <div class="legend"><span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span><span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span></div>
         </div>
         <div style="position:relative;width:100%;height:200px"><canvas id="cOsComp"></canvas></div>
       </div>
       <div class="card">
         <div class="card-head">
-          <div class="card-title"><i class="ti ti-clipboard-data"></i>주요 지표 비교</div>
-          <div class="legend">
-            <span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span>
-            <span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span>
-          </div>
+          <div class="card-title"><i class="ti ti-clipboard-data"></i>총 방문자 비교</div>
+          <div class="legend"><span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span><span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span></div>
         </div>
         <div style="position:relative;width:100%;height:200px"><canvas id="cKpi"></canvas></div>
       </div>
@@ -674,10 +475,9 @@ function renderMonth(key) {
       </div>
       <table class="tbl">
         <thead><tr>
-          <th style="width:70px">구분</th>
-          <th>페이지</th>
+          <th style="width:70px">구분</th><th>페이지</th>
           <th style="text-align:right">방문 수</th>
-          ${prev ? '<th style="text-align:right">전월</th><th style="text-align:right;width:80px">증감</th><th style="width:30px"></th>' : ''}
+          ${prev ? `<th style="text-align:right">전월 (${prev.label})</th><th style="text-align:right;width:80px">증감</th><th style="width:30px"></th>` : ''}
         </tr></thead>
         <tbody id="pageTbody"></tbody>
       </table>
@@ -685,13 +485,13 @@ function renderMonth(key) {
 
     <div class="card g1">
       <div class="card-head">
-        <div class="card-title"><i class="ti ti-chart-bar"></i>유입 페이지 Top 비교 (전월 vs 이번 달)</div>
+        <div class="card-title"><i class="ti ti-chart-bar"></i>유입 페이지 비교 (전월 vs 이번 달)</div>
         ${prev ? `<div class="legend"><span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span><span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span></div>` : ''}
       </div>
       <div style="position:relative;width:100%;height:270px"><canvas id="cPageBar"></canvas></div>
-    </div>
-  `;
+    </div>`;
 
+  // 차트 그리기
   drawDaily(d, avgD);
   drawOsDonut(d, osTotal);
   if (prev) { drawOsComp(d, prev); drawKpiComp(d, prev); }
@@ -699,185 +499,99 @@ function renderMonth(key) {
   drawPageBar(d, prev);
 }
 
-/* ── Daily chart ── */
+/* ── 일별 차트 ── */
 function drawDaily(d, avg) {
-  // 날짜별 색상: 평일=#2b7cd3, 토=#4fa8e8, 일=#e05252
-  const barColors = d.daily.days.map(day => {
-    if (day === '토') return '#4fa8e8';   // 토: 밝은 파랑
-    if (day === '일') return '#e05252';   // 일: 빨강
-    return '#2b7cd3';                     // 평일: 기본 파랑
-  });
-
-  // x축 레이블: "1\n(일)" 형태 — Chart.js는 배열로 멀티라인 지원
-  const xLabels = d.daily.dates.map((date, i) => [String(date), d.daily.days[i]]);
-
-  // 날짜 수에 따라 폰트 크기 자동 조정
-  const totalDays = d.daily.dates.length;
-  const tickFontSize = totalDays <= 17 ? 11 : totalDays <= 28 ? 10 : 9;
-
-  // 요일별 x축 레이블 색상
-  const tickColors = d.daily.days.map(day => {
-    if (day === '토') return '#4fa8e8';
-    if (day === '일') return '#e05252';
-    return '#a09f9a';
-  });
-
-  const c = new Chart(document.getElementById('cDaily'), {
+  const colors = d.daily.days.map(day => day==='토'?'#4fa8e8':day==='일'?'#e05252':'#2b7cd3');
+  const labels = d.daily.dates.map((dt,i) => [String(dt), d.daily.days[i]]);
+  const fs     = d.daily.dates.length <= 17 ? 11 : d.daily.dates.length <= 28 ? 10 : 9;
+  regChart('daily', new Chart(document.getElementById('cDaily'), {
     type: 'bar',
-    data: {
-      labels: xLabels,
-      datasets: [
-        {
-          data: d.daily.v,
-          backgroundColor: barColors,
-          borderRadius: 2,
-          barPercentage: 0.82,
-          categoryPercentage: 0.9,
-        },
-        {
-          type: 'line',
-          data: d.daily.v.map(() => avg),
-          borderColor: '#ef9f27',
-          borderWidth: 1.5,
-          borderDash: [4, 3],
-          pointRadius: 0,
-          tension: 0,
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: ctx => {
-              const i = ctx[0].dataIndex;
-              const day = d.daily.days[i];
-              const dayLabel = day === '토' ? '토요일' : day === '일' ? '일요일' : `${day}요일`;
-              return `${d.year}년 ${d.month}월 ${d.daily.dates[i]}일 (${dayLabel})`;
-            },
-            label: ctx => ctx.datasetIndex === 0
-              ? ` ${comma(ctx.raw)}명`
-              : ` 평균 ${comma(avg)}명`,
-          }
-        }
-      },
+    data: { labels, datasets: [
+      { data: d.daily.v, backgroundColor: colors, borderRadius: 2, barPercentage: .82, categoryPercentage: .9 },
+      { type:'line', data: d.daily.v.map(()=>avg), borderColor:'#ef9f27', borderWidth:1.5, borderDash:[4,3], pointRadius:0, tension:0 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{ callbacks:{
+        title: ctx => { const i=ctx[0].dataIndex; return `${d.year}년 ${d.month}월 ${d.daily.dates[i]}일 (${d.daily.days[i]}요일)`; },
+        label: ctx => ctx.datasetIndex===0 ? ` ${comma(ctx.raw)}명` : ` 평균 ${comma(avg)}명`
+      }}},
       scales: {
-        x: {
-          ticks: {
-            font: { size: tickFontSize },
-            autoSkip: false,          // ← 모든 날짜 표시
-            maxRotation: 0,
-            color: (ctx) => {
-              const i = ctx.index;
-              const day = d.daily.days[i];
-              if (day === '토') return '#4fa8e8';
-              if (day === '일') return '#e05252';
-              return '#a09f9a';
-            }
-          },
-          grid: { display: false }
-        },
-        y: {
-          ticks: { font: { size: 10 }, color: '#a09f9a', callback: K },
-          grid: { color: 'rgba(0,0,0,.05)' }
-        }
+        x: { ticks:{ font:{size:fs}, autoSkip:false, maxRotation:0,
+          color: ctx => { const day=d.daily.days[ctx.index]; return day==='토'?'#4fa8e8':day==='일'?'#e05252':'#a09f9a'; }
+        }, grid:{display:false} },
+        y: { ticks:{ font:{size:10}, color:'#a09f9a', callback:K }, grid:{color:'rgba(0,0,0,.05)'} }
       }
     }
-  });
-  regChart('daily', c);
+  }));
 }
 
-/* ── OS donut ── */
+/* ── OS 도넛 ── */
 function drawOsDonut(d, total) {
-  const vals = OS_KEYS.map(k => d.os[k]||0);
-  const c = new Chart(document.getElementById('cOs'), {
-    type:'doughnut',
-    data:{ labels:OS_LABELS, datasets:[{ data:vals, backgroundColor:OS_COLORS, borderWidth:2, borderColor:'#fff' }] },
-    options:{ responsive:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: ${comma(ctx.raw)}명` }} }, cutout:'65%' }
-  });
-  regChart('os', c);
-
-  const legend = document.getElementById('osLegend');
-  legend.innerHTML = OS_LABELS.map((l,i) => {
+  const vals = OS_KEYS.map(k=>d.os[k]||0);
+  regChart('os', new Chart(document.getElementById('cOs'), {
+    type: 'doughnut',
+    data: { labels:OS_LABELS, datasets:[{ data:vals, backgroundColor:OS_COLORS, borderWidth:2, borderColor:'#fff' }]},
+    options: { responsive:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>` ${ctx.label}: ${comma(ctx.raw)}명` }}}, cutout:'65%' }
+  }));
+  document.getElementById('osLegend').innerHTML = OS_LABELS.map((lbl,i) => {
     const p = total > 0 ? Math.round(vals[i]/total*100) : 0;
     return `<div class="donut-row">
       <span class="ldot" style="background:${OS_COLORS[i]}"></span>
-      <span class="donut-row-name">${l}</span>
+      <span class="donut-row-name">${lbl}</span>
       <div class="donut-row-bar"><div class="donut-row-fill" style="width:${p}%;background:${OS_COLORS[i]}"></div></div>
       <span class="donut-row-pct">${p}%</span>
     </div>`;
   }).join('');
 }
 
-/* ── OS compare ── */
+/* ── OS 비교 ── */
 function drawOsComp(d, prev) {
-  const dv = OS_KEYS.map(k=>d.os[k]||0);
-  const pv = OS_KEYS.map(k=>prev.os[k]||0);
-  const c = new Chart(document.getElementById('cOsComp'), {
+  regChart('osComp', new Chart(document.getElementById('cOsComp'), {
     type:'bar',
     data:{ labels:['Win','Mac','Android','iOS','Linux','Unknown'],
       datasets:[
-        { label:prev.label, data:pv, backgroundColor:'#2b7cd3', borderRadius:2 },
-        { label:d.label,    data:dv, backgroundColor:'#1D9E75', borderRadius:2 }
-      ]
-    },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{ ticks:{font:{size:10},color:'#a09f9a',maxRotation:0}, grid:{display:false} },
-        y:{ ticks:{font:{size:10},color:'#a09f9a',callback:K}, grid:{color:'rgba(0,0,0,.05)'} }
-      }
-    }
-  });
-  regChart('osComp', c);
+        { label:prev.label, data:OS_KEYS.map(k=>prev.os[k]||0), backgroundColor:'#2b7cd3', borderRadius:2 },
+        { label:d.label,    data:OS_KEYS.map(k=>d.os[k]||0),    backgroundColor:'#1D9E75', borderRadius:2 }
+      ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{font:{size:10},color:'#a09f9a',maxRotation:0},grid:{display:false}},
+               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+  }));
 }
 
-/* ── KPI compare ── */
+/* ── KPI 비교 (총 방문자만) ── */
 function drawKpiComp(d, prev) {
-  const c = new Chart(document.getElementById('cKpi'), {
+  regChart('kpi', new Chart(document.getElementById('cKpi'), {
     type:'bar',
     data:{ labels:['총 방문자'],
       datasets:[
         { label:prev.label, data:[prev.total], backgroundColor:'#2b7cd3', borderRadius:3 },
         { label:d.label,    data:[d.total],    backgroundColor:'#1D9E75', borderRadius:3 }
-      ]
-    },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{ ticks:{font:{size:11},color:'#a09f9a'}, grid:{display:false} },
-        y:{ ticks:{font:{size:10},color:'#a09f9a',callback:K}, grid:{color:'rgba(0,0,0,.05)'} }
-      }
-    }
-  });
-  regChart('kpi', c);
+      ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{font:{size:11},color:'#a09f9a'},grid:{display:false}},
+               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+  }));
 }
 
-/* ── Page table ── */
+/* ── 페이지 테이블 ── */
 function renderPageTable(key, group, prev) {
-  const d = DB[key];
+  const d    = DB[key];
   const rows = group==='all' ? d.pages : d.pages.filter(p=>p.g===group);
-  const tbody = document.getElementById('pageTbody');
-  tbody.innerHTML = rows.map(p => {
-    const pp = prev ? prev.pages.find(x=>x.name===p.name) : null;
+  document.getElementById('pageTbody').innerHTML = rows.map(p => {
+    const pp  = prev ? prev.pages.find(x=>x.name===p.name) : null;
     let bdg='', arr='';
-    if (pp) {
-      const r = pp.v > 0 ? p.v/pp.v : null;
-      if (r !== null) {
-        const pc = ((r-1)*100).toFixed(0);
-        const s = r>=1?'+':'';
-        bdg = `<span class="badge ${r>=1.05?'b-up':r<0.95?'b-dn':'b-nt'}">${s}${pc}%</span>`;
-        arr = `<span style="color:${r>=1?'#16906a':'#c0392b'};font-size:14px">${r>=1?'↑':'↓'}</span>`;
-      }
+    if (pp && pp.v > 0) {
+      const r  = p.v / pp.v;
+      const pc = ((r-1)*100).toFixed(0);
+      bdg = `<span class="badge ${r>=1.05?'b-up':r<0.95?'b-dn':'b-nt'}">${r>=1?'+':''}${pc}%</span>`;
+      arr = `<span style="color:${r>=1?'#16906a':'#c0392b'};font-size:14px">${r>=1?'↑':'↓'}</span>`;
     }
-    const groupLbl = p.g==='ad'
+    const gl = p.g==='ad'
       ? '<span style="background:#e8f2fc;color:#2b7cd3;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">광고홍보</span>'
       : '<span style="background:#e0f5ed;color:#16906a;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600">CRM</span>';
     return `<tr>
-      <td class="muted">${groupLbl}</td>
+      <td>${gl}</td>
       <td style="font-weight:500">${p.name}</td>
       <td class="num">${comma(p.v)}</td>
       ${prev ? `<td class="num" style="color:var(--text-secondary)">${pp ? comma(pp.v) : '-'}</td><td class="num">${bdg}</td><td>${arr}</td>` : ''}
@@ -886,41 +600,34 @@ function renderPageTable(key, group, prev) {
 }
 
 function switchTab(group, btn, key) {
-  document.querySelectorAll('#pageTabs .tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#pageTabs .tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const keys = sortedKeys(); const idx = keys.indexOf(key);
-  renderPageTable(key, group, idx>0 ? DB[keys[idx-1]] : null);
+  renderPageTable(key, group, prevOf(key));
 }
 
-/* ── Page bar chart ── */
+/* ── 페이지 바 차트 ── */
 function drawPageBar(d, prev) {
-  const top = [...d.pages].sort((a,b)=>b.v-a.v).slice(0,8);
+  const top   = [...d.pages].sort((a,b)=>b.v-a.v).slice(0,8);
   const dsets = [];
-  if (prev) dsets.push({ label:prev.label, data:top.map(p=>{const f=prev.pages.find(x=>x.name===p.name); return f?f.v:0;}), backgroundColor:'#2b7cd3', borderRadius:2 });
+  if (prev) dsets.push({ label:prev.label, data:top.map(p=>{ const f=prev.pages.find(x=>x.name===p.name); return f?f.v:0; }), backgroundColor:'#2b7cd3', borderRadius:2 });
   dsets.push({ label:d.label, data:top.map(p=>p.v), backgroundColor:'#1D9E75', borderRadius:2 });
-  const c = new Chart(document.getElementById('cPageBar'), {
+  regChart('pageBar', new Chart(document.getElementById('cPageBar'), {
     type:'bar',
     data:{ labels:top.map(p=>p.name), datasets:dsets },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{ ticks:{font:{size:11},color:'#a09f9a',autoSkip:false,maxRotation:25}, grid:{display:false} },
-        y:{ ticks:{font:{size:10},color:'#a09f9a',callback:K}, grid:{color:'rgba(0,0,0,.05)'} }
-      }
-    }
-  });
-  regChart('pageBar', c);
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{font:{size:11},color:'#a09f9a',autoSkip:false,maxRotation:25},grid:{display:false}},
+               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+  }));
 }
+
 /* ══════════════════════════════════════
    삭제
 ══════════════════════════════════════ */
 function deleteMonth(key) {
-  const label = DB[key]?.label || key;
-  if (!confirm(`"${label}" 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
-
+  if (!confirm(`"${DB[key].label}" 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  const label = DB[key].label;
   delete DB[key];
-
-  // 삭제 후 가장 최신 월로 이동, 없으면 빈 화면
+  deleteFromSheet(key);
   const remaining = sortedKeys();
   if (remaining.length > 0) {
     showPage(remaining[remaining.length - 1]);
@@ -934,106 +641,66 @@ function deleteMonth(key) {
         <div style="font-size:14px">데이터가 없습니다. 새 월 데이터를 추가하세요.</div>
       </div>`;
   }
-
-  deleteFromSheet(key, label);
-}
-
-async function deleteFromSheet(key, label) {
-  try {
-    const res = await fetch(SHEET_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'delete', key }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || '삭제 실패');
-    if (label) showToast(`${label} 삭제 완료`);
-  } catch(e) {
-    showToast('시트 삭제 실패: ' + e.message, true);
-  }
+  showToast(label + ' 삭제됨');
 }
 
 /* ══════════════════════════════════════
-   MODAL  (추가 & 편집 통합)
+   모달
 ══════════════════════════════════════ */
 let _editKey = null;
 
-function openModal(mode, key) {
-  _editKey = (mode === 'edit') ? key : null;
+function openModal(editKey) {
+  _editKey = editKey || null;
   const isEdit = !!_editKey;
   const d = isEdit ? DB[_editKey] : null;
 
   // 제목 & 배너
-  document.getElementById('modalTitle').textContent = isEdit
-    ? `${d.label} 데이터 수정` : '새 월 데이터 추가';
-  const banner = document.getElementById('editModeBanner');
-  const bannerText = document.getElementById('editModeBannerText');
+  document.getElementById('modalTitle').textContent = isEdit ? d.label + ' 데이터 수정' : '새 월 데이터 추가';
+  const banner = document.getElementById('editBanner');
   if (isEdit) {
     banner.style.display = 'flex';
-    bannerText.textContent = `${d.label} 데이터를 수정합니다. 연도·월 변경 시 기존 리포트는 삭제되고 새 월로 이동합니다.`;
+    document.getElementById('editBannerText').textContent = d.label + ' 데이터를 수정합니다.';
   } else {
     banner.style.display = 'none';
   }
 
-  // 연도/월 — 편집 시에도 수정 가능
+  // 기본 정보
   if (isEdit) {
-    document.getElementById('f-year').value = d.year;
-    document.getElementById('f-month').value = d.month;
+    sv('f-year',  d.year);  sv('f-month', d.month);
+    sv('f-bdays', d.bizDays); sv('f-total', d.total); sv('f-seo', d.seo);
   } else {
     const keys = sortedKeys();
     const last = keys[keys.length-1];
-    const [ly, lm] = last.split('-').map(Number);
-    let ny = ly, nm = lm + 1;
-    if (nm > 12) { nm = 1; ny++; }
-    document.getElementById('f-year').value = ny;
-    document.getElementById('f-month').value = nm;
+    if (last) {
+      const [ly, lm] = last.split('-').map(Number);
+      let ny=ly, nm=lm+1; if(nm>12){nm=1;ny++;}
+      sv('f-year',ny); sv('f-month',nm);
+    }
+    sv('f-bdays',''); sv('f-total',''); sv('f-seo','');
   }
-  // 편집/추가 모두 수정 가능
-  document.getElementById('f-year').readOnly  = false;
-  document.getElementById('f-month').readOnly = false;
-  document.getElementById('f-year').style.background  = '';
-  document.getElementById('f-month').style.background = '';
-
-  // 기본 정보
-  const sv = (id, val) => { const e = document.getElementById(id); if(e) e.value = (val !== undefined && val !== null) ? val : ''; };
-  sv('f-bdays', isEdit ? d.bizDays : '');
-  sv('f-total',  isEdit ? d.total  : '');
-  sv('f-seo',    isEdit ? d.seo    : '');
 
   // OS
-  sv('f-win',   isEdit ? d.os.windows : '');
-  sv('f-mac',   isEdit ? d.os.mac     : '');
-  sv('f-and',   isEdit ? d.os.android : '');
-  sv('f-ios',   isEdit ? d.os.ios     : '');
-  sv('f-linux', isEdit ? d.os.linux   : '');
-  sv('f-unk',   isEdit ? d.os.unknown : '');
+  const os = isEdit ? d.os : {};
+  sv('f-win',  os.windows||''); sv('f-mac',  os.mac||'');
+  sv('f-and',  os.android||''); sv('f-ios',  os.ios||'');
+  sv('f-linux',os.linux||'');   sv('f-unk',  os.unknown||'');
 
   // 페이지
-  const pv = (name) => isEdit ? (d.pages.find(p=>p.name===name)?.v ?? '') : '';
-  sv('p-main',   pv('메인페이지'));
-  sv('p-hist',   pv('연혁'));
-  sv('p-news',   pv('뉴스'));
-  sv('p-about',  pv('회사소개'));
-  sv('p-prod',   pv('자사 제품소개'));
-  sv('p-cart',   pv('장바구니'));
-  sv('p-signup', pv('회원가입'));
-  sv('p-plist',  pv('제품목록'));
-  sv('p-pdet',   pv('제품상세'));
-  sv('p-psup',   pv('제품지원'));
-  sv('p-qna',    pv('1:1 문의'));
-  sv('p-faq',    pv('FAQ'));
-  sv('p-sys',    pv('시스템 요구사항'));
+  const pv = name => isEdit ? (d.pages.find(p=>p.name===name)?.v||'') : '';
+  sv('p-main',  pv('메인페이지'));    sv('p-hist', pv('연혁'));
+  sv('p-news',  pv('뉴스'));          sv('p-about',pv('회사소개'));
+  sv('p-prod',  pv('자사 제품소개')); sv('p-cart', pv('장바구니'));
+  sv('p-signup',pv('회원가입'));       sv('p-plist',pv('제품목록'));
+  sv('p-pdet',  pv('제품상세'));       sv('p-psup', pv('제품지원'));
+  sv('p-qna',   pv('1:1 문의'));       sv('p-faq',  pv('FAQ'));
+  sv('p-sys',   pv('시스템 요구사항'));
 
-  // 일별 그리드 — 편집 시 기존 값 채움
+  // 일별
   const yr  = isEdit ? d.year  : +document.getElementById('f-year').value;
   const mon = isEdit ? d.month : +document.getElementById('f-month').value;
   buildDailyGrid(yr, mon);
   if (isEdit) {
-    d.daily.dates.forEach((day, idx) => {
-      const el = document.getElementById(`dd-${day}`);
-      if (el) el.value = d.daily.v[idx] || '';
-    });
+    d.daily.dates.forEach((day,i) => { const el=document.getElementById('dd-'+day); if(el) el.value=d.daily.v[i]||''; });
   }
 
   document.getElementById('addModal').classList.add('open');
@@ -1044,163 +711,123 @@ function closeModal() {
   _editKey = null;
 }
 
-document.getElementById('f-year').addEventListener('input', refreshDailyGrid);
-document.getElementById('f-month').addEventListener('input', refreshDailyGrid);
-function refreshDailyGrid() {
-  buildDailyGrid(+document.getElementById('f-year').value, +document.getElementById('f-month').value);
-}
+document.getElementById('f-year').addEventListener('input', () => {
+  if (!_editKey) buildDailyGrid(+document.getElementById('f-year').value, +document.getElementById('f-month').value);
+});
+document.getElementById('f-month').addEventListener('input', () => {
+  if (!_editKey) buildDailyGrid(+document.getElementById('f-year').value, +document.getElementById('f-month').value);
+});
 
 function buildDailyGrid(y, m) {
-  if (!y || !m || m < 1 || m > 12) return;
-  const days = daysInMonth(y, m);
-  const g = document.getElementById('dailyInputGrid');
-  g.innerHTML = '';
-  for (let i = 1; i <= days; i++) {
-    const dn = dayName(y, m, i);
-    const isWe = dn==='토'||dn==='일';
-    g.innerHTML += `<div class="daily-cell">
+  if (!y||!m||m<1||m>12) return;
+  const days = daysInMonth(y,m);
+  let html = '';
+  for (let i=1; i<=days; i++) {
+    const dn=dayName(y,m,i), isWe=dn==='토'||dn==='일';
+    html += `<div class="daily-cell">
       <label style="color:${isWe?'#c0392b':'var(--text-muted)'}">${i}<br>(${dn})</label>
       <input type="number" id="dd-${i}" min="0" placeholder="0" class="finput${isWe?' we':''}">
     </div>`;
   }
+  document.getElementById('dailyInputGrid').innerHTML = html;
 }
 
-const gv = id => { const e = document.getElementById(id); return e ? (parseInt(e.value)||0) : 0; };
-
+/* ── 저장 ── */
 function saveMonth() {
   const year  = gv('f-year');
   const month = gv('f-month');
   const total = gv('f-total');
-  if (!year || !month) { alert('연도와 월을 입력해주세요.'); return; }
-  if (!total) { alert('총 방문자 수를 입력해주세요.'); return; }
+  if (!year||!month) { alert('연도와 월을 입력해주세요.'); return; }
+  if (!total)        { alert('총 방문자 수를 입력해주세요.'); return; }
 
-  const isEdit = !!_editKey;
-  const oldKey = _editKey;  // 편집 전 원래 key
-  const newKey = `${year}-${String(month).padStart(2,'0')}`;
-
-  // 편집 모드에서 연도/월을 바꾸지 않았으면 → 무조건 oldKey 그대로 덮어쓰기
-  // 연도/월을 바꿨으면 → oldKey 삭제 후 newKey로 새로 저장
-  const key = newKey;
-  const keyChanged = isEdit && oldKey !== newKey;
-
+  const key  = `${year}-${String(month).padStart(2,'0')}`;
   const mnm  = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const days = daysInMonth(year, month);
 
-  // prevTotal/prevSeo: 항상 새 key 기준 직전 월에서 계산
-  const allKeys       = sortedKeys().filter(k => k !== oldKey); // 자기 자신 제외
-  const prevCandidates = allKeys.filter(k => k < key);
-  const prevKey        = prevCandidates.length > 0 ? prevCandidates[prevCandidates.length-1] : null;
-  const prevD          = prevKey ? DB[prevKey] : null;
-  const prevTotal      = prevD ? prevD.total : 0;
-  const prevSeo        = prevD ? prevD.seo   : 0;
-
-  // 일별 데이터 — 편집 시 입력된 날짜만 수집
-  const dailyDates = [], dailyDays = [], dailyV = [];
-  for (let i = 1; i <= days; i++) {
-    const el = document.getElementById(`dd-${i}`);
-    const val = el ? (parseInt(el.value) || 0) : 0;
-    if (val > 0 || !isEdit) {   // 신규: 전체, 편집: 0도 포함
-      dailyDates.push(i);
-      dailyDays.push(dayName(year, month, i));
-      dailyV.push(val);
-    }
+  // 편집 모드에서 연도/월이 바뀌었으면 기존 key 삭제
+  if (_editKey && _editKey !== key) {
+    delete DB[_editKey];
+    deleteFromSheet(_editKey);
   }
-  // 편집 시 0인 날도 포함해야 하므로 전체 수집
-  const dailyDatesFull = Array.from({length:days},(_,i)=>i+1);
-  const dailyDaysFull  = Array.from({length:days},(_,i)=>dayName(year,month,i+1));
-  const dailyVFull     = Array.from({length:days},(_,i)=>gv(`dd-${i+1}`));
 
-  // partial 판단: 마지막 날이 실제 월말보다 작거나 총합이 0인 날 다수
-  const lastNonZero = dailyVFull.map((v,i)=>v>0?i+1:0).filter(Boolean).pop() || days;
-  const partial = lastNonZero < days;
-
+  // 마지막 유효 일 (일별 v 중 마지막 0 초과 날)
+  const allV = Array.from({length:days}, (_,i) => gv(`dd-${i+1}`));
+  const lastNonZero = allV.map((v,i)=>v>0?i+1:0).filter(Boolean).pop() || days;
   const mm = String(month).padStart(2,'0');
-  const endDay = String(lastNonZero).padStart(2,'0');
 
   DB[key] = {
     label:   `${String(year).slice(2)}년 ${mnm[month-1]}`,
     year, month,
-    period:  partial
-      ? `${year}.${mm}.01 ~ ${mm}.${endDay}`
-      : `${year}.${mm}.01 ~ ${mm}.${String(days).padStart(2,'0')}`,
+    period:  `${year}.${mm}.01 ~ ${mm}.${String(lastNonZero).padStart(2,'0')}`,
     bizDays: gv('f-bdays'),
-    total,   prevTotal,
-    seo:     gv('f-seo'), prevSeo,
-    partial,
+    total, seo: gv('f-seo'),
+    os: { windows:gv('f-win'), mac:gv('f-mac'), android:gv('f-and'),
+          ios:gv('f-ios'), linux:gv('f-linux'), unknown:gv('f-unk') },
     daily: {
-      dates: partial ? dailyDatesFull.slice(0, lastNonZero) : dailyDatesFull,
-      days:  partial ? dailyDaysFull.slice(0, lastNonZero)  : dailyDaysFull,
-      v:     partial ? dailyVFull.slice(0, lastNonZero)      : dailyVFull,
-    },
-    os: {
-      windows: gv('f-win'), mac: gv('f-mac'), android: gv('f-and'),
-      ios: gv('f-ios'), linux: gv('f-linux'), unknown: gv('f-unk')
+      dates: Array.from({length:lastNonZero}, (_,i)=>i+1),
+      days:  Array.from({length:lastNonZero}, (_,i)=>dayName(year,month,i+1)),
+      v:     allV.slice(0, lastNonZero),
     },
     pages: [
-      {g:'ad', name:'메인페이지',    v:gv('p-main')},
-      {g:'ad', name:'연혁',          v:gv('p-hist')},
-      {g:'ad', name:'뉴스',          v:gv('p-news')},
-      {g:'ad', name:'회사소개',      v:gv('p-about')},
-      {g:'ad', name:'자사 제품소개', v:gv('p-prod')},
-      {g:'crm',name:'장바구니',      v:gv('p-cart')},
-      {g:'crm',name:'회원가입',      v:gv('p-signup')},
-      {g:'crm',name:'제품목록',      v:gv('p-plist')},
-      {g:'crm',name:'제품상세',      v:gv('p-pdet')},
-      {g:'crm',name:'제품지원',      v:gv('p-psup')},
-      {g:'crm',name:'1:1 문의',      v:gv('p-qna')},
-      {g:'crm',name:'FAQ',           v:gv('p-faq')},
-      {g:'crm',name:'시스템 요구사항',v:gv('p-sys')}
-    ]
+      {g:'ad', name:'메인페이지',     v:gv('p-main')},
+      {g:'ad', name:'연혁',           v:gv('p-hist')},
+      {g:'ad', name:'뉴스',           v:gv('p-news')},
+      {g:'ad', name:'회사소개',       v:gv('p-about')},
+      {g:'ad', name:'자사 제품소개',  v:gv('p-prod')},
+      {g:'crm',name:'장바구니',       v:gv('p-cart')},
+      {g:'crm',name:'회원가입',       v:gv('p-signup')},
+      {g:'crm',name:'제품목록',       v:gv('p-plist')},
+      {g:'crm',name:'제품상세',       v:gv('p-pdet')},
+      {g:'crm',name:'제품지원',       v:gv('p-psup')},
+      {g:'crm',name:'1:1 문의',       v:gv('p-qna')},
+      {g:'crm',name:'FAQ',            v:gv('p-faq')},
+      {g:'crm',name:'시스템 요구사항',v:gv('p-sys')},
+    ],
   };
 
   closeModal();
-
-  // 연도/월이 변경된 경우 기존 key 제거
-  if (keyChanged && DB[oldKey]) {
-    delete DB[oldKey];
-    deleteFromSheet(oldKey, '');  // 시트에서도 기존 행 삭제
-  }
-
   showPage(key);
-  saveToSheet(key); // 구글 시트에 영구 저장
+  saveToSheet(key);
 }
 
 /* ══════════════════════════════════════
-   INIT
+   토스트
 ══════════════════════════════════════ */
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#c0392b' : '#1a1a18';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.classList.remove('show'), isError?5000:3000);
+}
+
 /* ══════════════════════════════════════
-   초기화 — 시트에서 데이터 로드 후 시작
+   초기화 — 시트에서 로드 후 최신 월 표시
 ══════════════════════════════════════ */
 (async () => {
-  const content = document.getElementById('pageContent');
-
-  // 로딩 화면
-  content.innerHTML = `
+  document.getElementById('pageContent').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:65vh;gap:16px">
       <div style="width:38px;height:38px;border:3px solid var(--blue-light);border-top-color:var(--blue);border-radius:50%;animation:_spin .75s linear infinite"></div>
       <div style="font-size:14px;color:var(--text-secondary);font-weight:500">데이터 불러오는 중...</div>
-      <div style="font-size:12px;color:var(--text-muted)">구글 시트에서 최신 데이터를 가져옵니다</div>
-      <style>@keyframes _spin{to{transform:rotate(360deg)}}</style>
     </div>`;
-
   try {
     await loadFromSheet();
-    buildDailyGrid(2026, 6);
     const keys = sortedKeys();
-    showPage(keys[keys.length - 1]); // 최신 월 리포트로 시작
+    buildNav();
+    showPage(keys[keys.length - 1]);
   } catch(e) {
-    content.innerHTML = `
+    document.getElementById('pageContent').innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:65vh;gap:12px">
         <i class="ti ti-wifi-off" style="font-size:44px;color:var(--red);opacity:.5"></i>
-        <div style="font-size:15px;font-weight:600;color:var(--text-primary)">데이터를 불러오지 못했습니다</div>
-        <div style="font-size:13px;color:var(--text-muted);text-align:center;max-width:320px;line-height:1.6">${e.message}</div>
-        <button onclick="location.reload()" style="margin-top:6px;padding:9px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">
+        <div style="font-size:15px;font-weight:600">데이터를 불러오지 못했습니다</div>
+        <div style="font-size:13px;color:var(--text-muted)">${e.message}</div>
+        <button onclick="location.reload()" style="padding:9px 24px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">
           <i class="ti ti-refresh" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>다시 시도
         </button>
       </div>`;
   }
 })();
-
 </script>
 </body>
 </html>

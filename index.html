@@ -256,7 +256,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Pretendard',
       <div class="logo-icon"><i class="ti ti-chart-bar"></i></div>
       <span class="logo-name">소프트힐스</span>
     </div>
-    <div class="logo-sub">방문자 유입 분석 대시보드</div>
+    <div class="logo-sub">홈페이지 방문 유입 현황</div>
   </div>
 
   <div class="nav-group-label">월별 리포트</div>
@@ -480,10 +480,10 @@ const OS_COLORS = ['#2b7cd3','#d4537e','#7f77dd','#ef9f27','#1D9E75','#b4b2a9'];
 let currentKey = null;
 
 function buildNav() {
-  const keys = sortedKeys();
+  const keys = sortedKeys();                    // 오름차순 [3월,4월,5월]
   const latest = keys[keys.length - 1];
   const el = document.getElementById('navList');
-  el.innerHTML = keys.map(k => `
+  el.innerHTML = [...keys].reverse().map(k => `  // 역순으로 표시 (5월→4월→3월)
     <div class="nav-item ${currentKey===k?'active':''}" onclick="showPage('${k}')">
       <i class="ti ti-calendar-month"></i>${DB[k].label}
       ${k === latest ? '<span class="nav-dot"></span>' : ''}
@@ -1999,7 +1999,7 @@ function showToast(msg, isError = false) {
 
   buildDailyGrid(2026, 6);
   const keys = sortedKeys();
-  showPage(keys[keys.length - 1]); // 가장 최근 월로 시작
+  showPage(keys[keys.length - 1]); // 항상 최신 월 리포트로 시작
 })();
 </script>
 </body>

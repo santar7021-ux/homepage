@@ -970,19 +970,15 @@ function openModal(mode, key) {
   const bannerText = document.getElementById('editModeBannerText');
   if (isEdit) {
     banner.style.display = 'flex';
-    bannerText.textContent = `${d.label} (${d.period}) 데이터를 수정합니다. 저장하면 현재 데이터를 덮어씁니다.`;
+    bannerText.textContent = `${d.label} 데이터를 수정합니다. 연도·월 변경 시 기존 리포트는 삭제되고 새 월로 이동합니다.`;
   } else {
     banner.style.display = 'none';
   }
 
-  // 연도/월 — 편집 시 고정
+  // 연도/월 — 편집 시에도 수정 가능
   if (isEdit) {
     document.getElementById('f-year').value = d.year;
     document.getElementById('f-month').value = d.month;
-    document.getElementById('f-year').readOnly = true;
-    document.getElementById('f-month').readOnly = true;
-    document.getElementById('f-year').style.background = 'var(--bg)';
-    document.getElementById('f-month').style.background = 'var(--bg)';
   } else {
     const keys = sortedKeys();
     const last = keys[keys.length-1];
@@ -991,11 +987,12 @@ function openModal(mode, key) {
     if (nm > 12) { nm = 1; ny++; }
     document.getElementById('f-year').value = ny;
     document.getElementById('f-month').value = nm;
-    document.getElementById('f-year').readOnly = false;
-    document.getElementById('f-month').readOnly = false;
-    document.getElementById('f-year').style.background = '';
-    document.getElementById('f-month').style.background = '';
   }
+  // 편집/추가 모두 수정 가능
+  document.getElementById('f-year').readOnly  = false;
+  document.getElementById('f-month').readOnly = false;
+  document.getElementById('f-year').style.background  = '';
+  document.getElementById('f-month').style.background = '';
 
   // 기본 정보
   const sv = (id, val) => { const e = document.getElementById(id); if(e) e.value = (val !== undefined && val !== null) ? val : ''; };
@@ -1049,7 +1046,6 @@ function closeModal() {
 document.getElementById('f-year').addEventListener('input', refreshDailyGrid);
 document.getElementById('f-month').addEventListener('input', refreshDailyGrid);
 function refreshDailyGrid() {
-  if (_editKey) return; // 편집 모드에선 그리드 재빌드 불필요
   buildDailyGrid(+document.getElementById('f-year').value, +document.getElementById('f-month').value);
 }
 
@@ -1077,24 +1073,25 @@ function saveMonth() {
   if (!year || !month) { alert('연도와 월을 입력해주세요.'); return; }
   if (!total) { alert('총 방문자 수를 입력해주세요.'); return; }
 
-  const key  = `${year}-${String(month).padStart(2,'0')}`;
+  const isEdit = !!_editKey;
+  const oldKey = _editKey;  // 편집 전 원래 key
+  const newKey = `${year}-${String(month).padStart(2,'0')}`;
+
+  // 편집 모드에서 연도/월을 바꾸지 않았으면 → 무조건 oldKey 그대로 덮어쓰기
+  // 연도/월을 바꿨으면 → oldKey 삭제 후 newKey로 새로 저장
+  const key = newKey;
+  const keyChanged = isEdit && oldKey !== newKey;
+
   const mnm  = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   const days = daysInMonth(year, month);
 
-  // 이전 월 — 편집 시엔 현재 데이터의 prevTotal 유지, 신규엔 직전 키 기준
-  const isEdit = !!_editKey;
-  let prevTotal, prevSeo;
-  if (isEdit) {
-    prevTotal = DB[key]?.prevTotal ?? 0;
-    prevSeo   = DB[key]?.prevSeo   ?? 0;
-  } else {
-    const keys = sortedKeys();
-    const prevCandidates = keys.filter(k => k < key);
-    const prevKey = prevCandidates.length > 0 ? prevCandidates[prevCandidates.length-1] : null;
-    const prevD   = prevKey ? DB[prevKey] : null;
-    prevTotal = prevD ? prevD.total : 0;
-    prevSeo   = prevD ? prevD.seo   : 0;
-  }
+  // prevTotal/prevSeo: 항상 새 key 기준 직전 월에서 계산
+  const allKeys       = sortedKeys().filter(k => k !== oldKey); // 자기 자신 제외
+  const prevCandidates = allKeys.filter(k => k < key);
+  const prevKey        = prevCandidates.length > 0 ? prevCandidates[prevCandidates.length-1] : null;
+  const prevD          = prevKey ? DB[prevKey] : null;
+  const prevTotal      = prevD ? prevD.total : 0;
+  const prevSeo        = prevD ? prevD.seo   : 0;
 
   // 일별 데이터 — 편집 시 입력된 날짜만 수집
   const dailyDates = [], dailyDays = [], dailyV = [];
@@ -1156,6 +1153,13 @@ function saveMonth() {
   };
 
   closeModal();
+
+  // 연도/월이 변경된 경우 기존 key 제거
+  if (keyChanged && DB[oldKey]) {
+    delete DB[oldKey];
+    deleteFromSheet(oldKey, '');  // 시트에서도 기존 행 삭제
+  }
+
   showPage(key);
   saveToSheet(key); // 구글 시트에 영구 저장
 }

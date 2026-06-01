@@ -435,9 +435,10 @@ async function saveToSheet(key) {
   const payload = dbToPayload(key);
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res  = await fetch(SHEET_API, {
+      const res = await fetch(SHEET_API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // text/plain → preflight(OPTIONS) 없이 바로 전송 (Apps Script CORS 호환)
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -939,15 +940,15 @@ function deleteMonth(key) {
 
 async function deleteFromSheet(key, label) {
   try {
-    const res  = await fetch(SHEET_API, {
+    const res = await fetch(SHEET_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'delete', key }),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || '삭제 실패');
-    showToast(`${label} 삭제 완료`);
+    if (label) showToast(`${label} 삭제 완료`);
   } catch(e) {
     showToast('시트 삭제 실패: ' + e.message, true);
   }

@@ -480,10 +480,10 @@ const OS_COLORS = ['#2b7cd3','#d4537e','#7f77dd','#ef9f27','#1D9E75','#b4b2a9'];
 let currentKey = null;
 
 function buildNav() {
-  const keys = sortedKeys();                    // 오름차순 [3월,4월,5월]
+  const keys = sortedKeys();
   const latest = keys[keys.length - 1];
   const el = document.getElementById('navList');
-  el.innerHTML = [...keys].reverse().map(k => `  // 역순으로 표시 (5월→4월→3월)
+  el.innerHTML = [...keys].reverse().map(k => `
     <div class="nav-item ${currentKey===k?'active':''}" onclick="showPage('${k}')">
       <i class="ti ti-calendar-month"></i>${DB[k].label}
       ${k === latest ? '<span class="nav-dot"></span>' : ''}

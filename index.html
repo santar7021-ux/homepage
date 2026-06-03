@@ -597,7 +597,7 @@ function renderMonth(key) {
         ${prev ? `<div class="legend"><span><span class="ldot" style="background:#2b7cd3"></span>${prev.label}</span><span><span class="ldot" style="background:#1D9E75"></span>${d.label}</span></div>` : ''}
       </div>
       <div style="position:relative;width:100%;height:270px"><canvas id="cPageBar"></canvas></div>
-    </div>`;
+    </div>
 
     <div class="insight-card" id="insightCard">
       <div class="insight-head">
@@ -613,7 +613,7 @@ function renderMonth(key) {
           ${[1,2,3,4,5].map(()=>'<div class="insight-skel-row"><div class="insight-skel-num"></div><div class="insight-skel-body"><div class="insight-skel-title"></div><div class="insight-skel-desc"></div></div></div>').join('')}
         </div>
       </div>
-    </div>
+    </div>`;
 
   // 차트 그리기
   drawDaily(d, avgD);

@@ -253,19 +253,38 @@ let DB = {};
 
 // 시트 행 → DB 엔트리
 function rowToDB(r) {
-  const arr = f => { try { return JSON.parse(f||'[]'); } catch(e) { return []; } };
+  // GAS가 이미 배열로 파싱해서 보내는 경우와 문자열로 오는 경우 모두 처리
+  const arr = f => {
+    if (Array.isArray(f)) return f;
+    try { const p = JSON.parse(f || '[]'); return Array.isArray(p) ? p : []; }
+    catch(e) { return []; }
+  };
   return {
-    label:    String(r.label||''),
-    year:     +r.year||0,  month:    +r.month||0,
-    period:   String(r.period||''),
-    bizDays:  +r.bizDays||0,
-    total:    +r.total||0,  seo: +r.seo||0,
-    os:{ windows:+r.win||0, mac:+r.mac||0, android:+r.android||0,
-         ios:+r.ios||0,     linux:+r.linux||0, unknown:+r.unknown||0 },
-    daily:{ dates: arr(r.daily_dates).map(Number),
-            days:  arr(r.daily_days).map(String),
-            v:     arr(r.daily_v).map(Number) },
-    pages: arr(r.pages_json).map(p=>({ g:String(p.g||'crm'), name:String(p.name||''), v:+p.v||0 })),
+    label:   String(r.label || ''),
+    year:    +r.year  || 0,
+    month:   +r.month || 0,
+    period:  String(r.period  || ''),
+    bizDays: +r.bizDays || 0,
+    total:   +r.total || 0,
+    seo:     +r.seo   || 0,
+    os: {
+      windows: +r.win     || 0,
+      mac:     +r.mac     || 0,
+      android: +r.android || 0,
+      ios:     +r.ios     || 0,
+      linux:   +r.linux   || 0,
+      unknown: +r.unknown || 0,
+    },
+    daily: {
+      dates: arr(r.daily_dates).map(Number),
+      days:  arr(r.daily_days).map(String),
+      v:     arr(r.daily_v).map(Number),
+    },
+    pages: arr(r.pages_json).map(p => ({
+      g:    String(p.g    || 'crm'),
+      name: String(p.name || ''),
+      v:    +p.v || 0,
+    })),
   };
 }
 
@@ -379,10 +398,10 @@ let currentKey = null;
 function buildNav() {
   const el = document.getElementById('navList');
   if (!el) return;
-  // sortedKeys()는 항상 오름차순(2026-03→04→05) — 사이드바는 최신월이 위로
-  const keys    = sortedKeys();
+  reorderDB(); // 항상 key 오름차순으로 DB 재정렬 후 렌더링
+  const keys    = sortedKeys();          // 2026-03 → 04 → 05
   const latest  = keys[keys.length - 1];
-  const navKeys = [...keys].reverse(); // 내림차순: 2026-05→04→03
+  const navKeys = [...keys].reverse();   // 사이드바: 5월→4월→3월 (최신이 위)
   el.innerHTML  = navKeys.map(k => `
     <div class="nav-item ${currentKey===k?'active':''}" onclick="showPage('${k}')">
       <i class="ti ti-calendar-month"></i>${DB[k].label}

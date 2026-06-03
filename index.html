@@ -129,6 +129,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
 .btn-primary:hover{background:#1e6bbf}
 .btn-ghost{padding:9px 18px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-med);border-radius:8px;font-size:13px;cursor:pointer}
 
+
+/* INSIGHT */
+.insight-card{background:linear-gradient(135deg,#1a1f35 0%,#0f1729 100%);border:1px solid rgba(43,124,211,.25);border-radius:12px;padding:20px 24px;margin-bottom:14px;position:relative;overflow:hidden}
+.insight-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2b7cd3,#6d5ae0,#1D9E75);border-radius:12px 12px 0 0}
+.insight-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.insight-title{font-size:13px;font-weight:600;color:#e8eaf0;display:flex;align-items:center;gap:7px}
+.insight-title i{font-size:15px;color:#6d9eeb}
+.insight-refresh{display:flex;align-items:center;gap:6px;padding:5px 13px;background:rgba(43,124,211,.15);border:1px solid rgba(43,124,211,.3);border-radius:7px;font-size:12px;color:#6d9eeb;cursor:pointer;transition:all .15s;white-space:nowrap}
+.insight-refresh:hover{background:rgba(43,124,211,.28);border-color:rgba(43,124,211,.5)}
+.insight-refresh i{font-size:13px}
+.insight-refresh.spinning i{animation:_spin .7s linear infinite}
+.insight-list{display:flex;flex-direction:column;gap:10px}
+.insight-item{display:flex;gap:12px;align-items:flex-start}
+.insight-num{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.insight-num.n1{background:rgba(43,124,211,.25);color:#6d9eeb}
+.insight-num.n2{background:rgba(109,90,224,.25);color:#a89be8}
+.insight-num.n3{background:rgba(29,158,117,.25);color:#4ecda0}
+.insight-num.n4{background:rgba(217,119,6,.22);color:#f5b942}
+.insight-num.n5{background:rgba(192,57,43,.2);color:#e07060}
+.insight-body{flex:1}
+.insight-body strong{display:block;font-size:13px;font-weight:600;color:#e8eaf0;line-height:1.4;margin-bottom:3px}
+.insight-body span{font-size:12px;color:#8892a4;line-height:1.5}
+.insight-skeleton{display:flex;flex-direction:column;gap:10px}
+.insight-skel-row{display:flex;gap:12px;align-items:flex-start}
+.insight-skel-num{width:22px;height:22px;border-radius:6px;background:rgba(255,255,255,.07);flex-shrink:0}
+.insight-skel-body{flex:1;display:flex;flex-direction:column;gap:6px}
+.insight-skel-title{height:14px;border-radius:4px;background:rgba(255,255,255,.08);width:65%}
+.insight-skel-desc{height:12px;border-radius:4px;background:rgba(255,255,255,.05);width:90%}
+@keyframes skel-pulse{0%,100%{opacity:.6}50%{opacity:1}}
+.insight-skeleton *{animation:skel-pulse 1.4s ease-in-out infinite}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);padding:10px 22px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -308,23 +339,48 @@ function dbToPayload(key) {
 
 // 직전 월 DB 엔트리 반환 (없으면 null)
 function prevOf(key) {
+  const normKey = normalizeKey(key);
   const keys = sortedKeys();
-  const idx  = keys.indexOf(key);
+  const idx  = keys.indexOf(normKey);
   return idx > 0 ? DB[keys[idx-1]] : null;
 }
 
 /* ══════════════════════════════════════
    시트 I/O
 ══════════════════════════════════════ */
+// 구글 시트가 "2026-03"을 날짜로 자동변환 → GAS가 Date 직렬화 문자열로 보내는 경우 대비
+// key를 항상 "YYYY-MM" 형식으로 정규화
+function normalizeKey(rawKey) {
+  if (!rawKey) return null;
+  const s = String(rawKey).trim();
+  // 이미 YYYY-MM 형식이면 그대로
+  if (/^\d{4}-\d{2}$/.test(s)) return s;
+  // Date 파싱 시도 (예: "Sun Mar 01 2026 09:00:00 GMT+0900" 등)
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return y + '-' + m;
+  }
+  return s;
+}
+
 async function loadFromSheet() {
   const res  = await fetch(SHEET_API + '?action=read');
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || '읽기 실패');
-  // key 오름차순(시간순)으로 정렬해서 DB에 삽입 — 순서가 항상 2026-03 → 04 → 05
-  const sorted = Object.entries(json.data).sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+  // key를 YYYY-MM 형식으로 정규화 후 오름차순 정렬 → DB 삽입
+  const entries = Object.entries(json.data)
+    .map(([k, r]) => [normalizeKey(k), r])
+    .filter(([k]) => k)
+    .sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
   DB = {};
-  sorted.forEach(([k, r]) => { DB[k] = rowToDB(r); });
+  entries.forEach(([k, r]) => {
+    const entry = rowToDB(r);
+    entry._key = k; // key를 entry 내부에도 저장 (디버그용)
+    DB[k] = entry;
+  });
   if (!Object.keys(DB).length) throw new Error('시트에 데이터가 없습니다');
 }
 
@@ -410,7 +466,7 @@ function buildNav() {
 }
 
 function showPage(key) {
-  currentKey = key;
+  currentKey = normalizeKey(key) || key;
   buildNav();
   clearCharts();
   document.getElementById('pageContent').innerHTML = '';
@@ -543,12 +599,30 @@ function renderMonth(key) {
       <div style="position:relative;width:100%;height:270px"><canvas id="cPageBar"></canvas></div>
     </div>`;
 
+    <div class="insight-card" id="insightCard">
+      <div class="insight-head">
+        <div class="insight-title">
+          <i class="ti ti-bulb"></i>AI 분석 인사이트 &mdash; ${d.label}
+        </div>
+        <button class="insight-refresh" id="insightRefreshBtn" onclick="generateInsight('${key}', true)">
+          <i class="ti ti-refresh"></i>새로고침
+        </button>
+      </div>
+      <div id="insightBody">
+        <div class="insight-skeleton">
+          ${[1,2,3,4,5].map(()=>'<div class="insight-skel-row"><div class="insight-skel-num"></div><div class="insight-skel-body"><div class="insight-skel-title"></div><div class="insight-skel-desc"></div></div></div>').join('')}
+        </div>
+      </div>
+    </div>
+
   // 차트 그리기
   drawDaily(d, avgD);
   drawOsDonut(d, osTotal);
   if (prev) { drawOsComp(d, prev); drawKpiComp(d, prev); }
   renderPageTable(key, 'all', prev);
   drawPageBar(d, prev);
+  // AI 인사이트 자동 생성 (페이지 렌더 후 바로 실행)
+  generateInsight(key, false);
 }
 
 /* ── 일별 차트 ── */
@@ -655,6 +729,107 @@ function switchTab(group, btn, key) {
   document.querySelectorAll('#pageTabs .tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderPageTable(key, group, prevOf(key));
+}
+
+/* ══════════════════════════════════════
+   AI 분석 인사이트 생성
+══════════════════════════════════════ */
+const _insightCache = {}; // key별 인사이트 캐시
+
+async function generateInsight(key, forceRefresh) {
+  const d    = DB[key];
+  const prev = prevOf(key);
+  if (!d) return;
+
+  // 캐시 있고 강제 새로고침 아니면 바로 렌더
+  if (!forceRefresh && _insightCache[key]) {
+    renderInsight(_insightCache[key]);
+    return;
+  }
+
+  // 로딩 스피너
+  const btn = document.getElementById('insightRefreshBtn');
+  if (btn) btn.classList.add('spinning');
+  document.getElementById('insightBody').innerHTML = `
+    <div class="insight-skeleton">
+      ${[1,2,3,4,5].map(()=>'<div class="insight-skel-row"><div class="insight-skel-num"></div><div class="insight-skel-body"><div class="insight-skel-title"></div><div class="insight-skel-desc"></div></div></div>').join('')}
+    </div>`;
+
+  // 데이터 요약
+  const avgD   = d.bizDays > 0 ? Math.round(d.total / d.bizDays) : 0;
+  const peak   = d.daily.v.length ? Math.max(...d.daily.v) : 0;
+  const peakDay = d.daily.dates[d.daily.v.indexOf(peak)];
+  const osTotal = ['windows','mac','android','ios','linux','unknown'].reduce((s,k)=>s+(d.os[k]||0),0);
+  const topOs  = ['windows','mac','android','ios','linux','unknown']
+    .map(k=>({k, v:d.os[k]||0})).sort((a,b)=>b.v-a.v)[0];
+  const topPage = [...d.pages].sort((a,b)=>b.v-a.v)[0];
+  const mobileTotal = (d.os.android||0) + (d.os.ios||0);
+  const mobilePct = osTotal > 0 ? Math.round(mobileTotal/osTotal*100) : 0;
+
+  const prevInfo = prev ? `전월(${prev.label}) 대비 총 방문자 ${prev.total > d.total ? '감소' : '증가'} (${prev.total}→${d.total}, ${((d.total-prev.total)/prev.total*100).toFixed(1)}%), 전월 SEO ${prev.seo}, 전월 상위 페이지: ${[...prev.pages].sort((a,b)=>b.v-a.v)[0]?.name}(${[...prev.pages].sort((a,b)=>b.v-a.v)[0]?.v}회)` : '전월 데이터 없음';
+
+  const prompt = `당신은 B2B 소프트웨어 회사 소프트힐스의 홈페이지 방문 분석 전문가입니다.
+아래 ${d.label} 데이터를 분석해서 경영진 보고용 인사이트를 두괄식으로 5개 작성해주세요.
+
+[데이터]
+- 기간: ${d.period} (영업일 ${d.bizDays}일)
+- 총 방문자: ${d.total}명 / 일평균: ${avgD}명
+- 네이버 SEO 지수: ${d.seo}
+- 피크일: ${d.month}월 ${peakDay}일 (${peak}명)
+- OS 분포: Windows ${d.os.windows}, Mac ${d.os.mac}, Android ${d.os.android}, iOS ${d.os.ios}, Linux ${d.os.linux}, Unknown ${d.os.unknown}
+- 모바일 비율: ${mobilePct}% (Android+iOS)
+- 최다 방문 페이지: ${topPage?.name} (${topPage?.v}회)
+- 상위 5개 페이지: ${[...d.pages].sort((a,b)=>b.v-a.v).slice(0,5).map(p=>p.name+'('+p.v+')').join(', ')}
+- ${prevInfo}
+
+[작성 규칙]
+- 각 인사이트는 반드시 핵심 결론을 첫 문장에 (두괄식)
+- 첫 문장: 굵게 표시될 제목 (20자 이내, 핵심 메시지)
+- 두 번째 문장: 수치 근거 포함한 설명 (40자 이내)
+- 긍정/부정/기회 균형있게
+- 마케팅/CRM 관점 포함
+
+반드시 아래 JSON 형식으로만 응답하세요 (마크다운 없이):
+{"insights":[{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"}]}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    _insightCache[key] = parsed.insights;
+    renderInsight(parsed.insights);
+  } catch(e) {
+    document.getElementById('insightBody').innerHTML =
+      `<div style="font-size:13px;color:#8892a4;padding:8px 0">인사이트를 생성하지 못했습니다. 새로고침을 눌러주세요.</div>`;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+
+function renderInsight(insights) {
+  if (!insights?.length) return;
+  const colors = ['n1','n2','n3','n4','n5'];
+  document.getElementById('insightBody').innerHTML = `
+    <div class="insight-list">
+      ${insights.map((it, i) => `
+        <div class="insight-item">
+          <div class="insight-num ${colors[i]||'n1'}">${i+1}</div>
+          <div class="insight-body">
+            <strong>${it.title}</strong>
+            <span>${it.desc}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 /* ── 페이지 바 차트 ── */

@@ -166,9 +166,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* TREND SECTION */
-.trend-section{margin-top:28px;padding:0 30px 60px}
-.trend-section-title{font-size:19px;font-weight:700;letter-spacing:-.3px;margin-bottom:4px}
-.trend-section-sub{font-size:13px;color:var(--text-secondary);margin-bottom:18px}
+.sidebar-trend-menu{padding:8px 0 4px;border-top:1px solid var(--border);margin-top:4px}
 .trend-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .trend-kpi{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
 .trend-kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px}
@@ -195,6 +193,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
   </div>
   <div class="nav-label">월별 리포트</div>
   <div id="navList"></div>
+  <div class="sidebar-trend-menu">
+    <div class="nav-label">방문자 추이</div>
+    <div class="nav-item" id="navTrend" onclick="showTrendPage()">
+      <i class="ti ti-trending-up"></i>방문자 추이 그래프
+    </div>
+  </div>
   <div class="sidebar-footer">
     <button class="add-btn" onclick="openModal()"><i class="ti ti-plus"></i> 새 월 데이터 추가</button>
   </div>
@@ -202,22 +206,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
 
 <main class="main"><div id="pageContent"></div></main>
 
-<!-- 방문자 추이 섹션 (항상 하단 고정) -->
-<div class="trend-section" id="trendSection">
-  <div class="trend-section-title">방문자 추이</div>
-  <div class="trend-section-sub">월별 방문자 추이 그래프</div>
-  <div class="trend-kpi-row" id="trendKpiRow"></div>
-  <div class="card g1">
-    <div class="card-head">
-      <div class="card-title"><i class="ti ti-chart-line"></i>월별 방문자 추이</div>
-      <div style="display:flex;gap:14px;font-size:11.5px;color:var(--text-secondary)">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(160,159,154,.55);vertical-align:middle;margin-right:4px"></span>고정 (25.07~26.02)</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(43,124,211,.8);vertical-align:middle;margin-right:4px"></span>실시간 (26.03~)</span>
-      </div>
-    </div>
-    <div style="position:relative;width:100%;height:340px"><canvas id="cTrend"></canvas></div>
-  </div>
-</div>
 
 <!-- Modal -->
 <div class="overlay" id="addModal">
@@ -501,6 +489,8 @@ function buildNav() {
 
 function showPage(key) {
   currentKey = normalizeKey(key) || key;
+  var nt = document.getElementById('navTrend');
+  if (nt) nt.classList.remove('active');
   buildNav();
   clearCharts();
   document.getElementById('pageContent').innerHTML = '';
@@ -1163,7 +1153,6 @@ function saveMonth() {
   closeModal();
   showPage(key);
   saveToSheet(key);
-  renderTrendSection();
 }
 
 /* ══════════════════════════════════════
@@ -1201,7 +1190,13 @@ function getTrendData() {
   return FIXED_TREND.concat(live);
 }
 
-function renderTrendSection() {
+function showTrendPage() {
+  // 사이드바 활성 상태
+  document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
+  var nt = document.getElementById('navTrend');
+  if (nt) nt.classList.add('active');
+  currentKey = null;
+
   var data    = getTrendData();
   var fixLen  = FIXED_TREND.length;
   var labels  = data.map(function(d){ return d.label; });
@@ -1217,32 +1212,55 @@ function renderTrendSection() {
   var maxLabel = data[vals.indexOf(maxVal)].label;
   var gpct     = lastIdx > 0 && vals[lastIdx-1] > 0
     ? (((vals[lastIdx]-vals[lastIdx-1])/vals[lastIdx-1])*100).toFixed(1) : null;
-  var gcolor   = gpct !== null ? (+gpct >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--text-muted)';
-  var garrow   = gpct !== null ? (+gpct >= 0 ? '▲' : '▼') : '';
+  var gup      = gpct !== null && +gpct >= 0;
 
-  // KPI 카드 렌더
-  document.getElementById('trendKpiRow').innerHTML =
-    '<div class="trend-kpi">' +
-      '<div class="trend-kpi-label">누적 총 방문자</div>' +
-      '<div class="trend-kpi-val">' + comma(totalAll) + '</div>' +
-      '<div class="trend-kpi-sub">' + data[0].label + ' ~ ' + data[lastIdx].label + '</div>' +
-    '</div>' +
-    '<div class="trend-kpi">' +
-      '<div class="trend-kpi-label">최고 방문월</div>' +
-      '<div class="trend-kpi-val" style="font-size:16px">' + maxLabel + '</div>' +
-      '<div class="trend-kpi-sub" style="color:var(--blue)">' + comma(maxVal) + '명</div>' +
-    '</div>' +
-    '<div class="trend-kpi">' +
-      '<div class="trend-kpi-label">실시간 구간 월평균</div>' +
-      '<div class="trend-kpi-val">' + (liveVals.length ? comma(liveAvg) : '-') + '</div>' +
-      '<div class="trend-kpi-sub">26년 3월 이후 기준</div>' +
-    '</div>' +
-    '<div class="trend-kpi">' +
-      '<div class="trend-kpi-label">전월 대비 증감</div>' +
-      '<div class="trend-kpi-val" style="font-size:16px;color:' + gcolor + '">' +
-        (gpct !== null ? garrow + Math.abs(gpct) + '%' : '-') +
+  // 페이지 HTML 렌더
+  clearCharts();
+  document.getElementById('pageContent').innerHTML =
+    '<div class="page-header">' +
+      '<div class="page-title">방문자 추이</div>' +
+      '<div class="page-meta">방문자 추이 그래프' +
+        '<span class="meta-sep">·</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px">' +
+          '<span style="width:9px;height:9px;border-radius:2px;background:rgba(160,159,154,.6);display:inline-block"></span>고정 (25.07~26.02)' +
+        '</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px">' +
+          '<span style="width:9px;height:9px;border-radius:2px;background:#2b7cd3;display:inline-block"></span>실시간 (26.03~)' +
+        '</span>' +
       '</div>' +
-      '<div class="trend-kpi-sub">' + data[lastIdx].label + ' 기준</div>' +
+    '</div>' +
+
+    '<div class="trend-kpi-row">' +
+      '<div class="trend-kpi">' +
+        '<div class="trend-kpi-label"><i class="ti ti-users" style="font-size:12px"></i> 누적 총 방문자</div>' +
+        '<div class="trend-kpi-val">' + comma(totalAll) + '</div>' +
+        '<div class="trend-kpi-sub">' + data[0].label + ' ~ ' + data[lastIdx].label + '</div>' +
+      '</div>' +
+      '<div class="trend-kpi">' +
+        '<div class="trend-kpi-label"><i class="ti ti-crown" style="font-size:12px"></i> 최고 방문월</div>' +
+        '<div class="trend-kpi-val" style="font-size:17px">' + maxLabel + '</div>' +
+        '<div class="trend-kpi-sub" style="color:var(--blue)">' + comma(maxVal) + '명</div>' +
+      '</div>' +
+      '<div class="trend-kpi">' +
+        '<div class="trend-kpi-label"><i class="ti ti-calendar-stats" style="font-size:12px"></i> 실시간 월평균</div>' +
+        '<div class="trend-kpi-val">' + (liveVals.length ? comma(liveAvg) : '-') + '</div>' +
+        '<div class="trend-kpi-sub">26년 3월 이후</div>' +
+      '</div>' +
+      '<div class="trend-kpi">' +
+        '<div class="trend-kpi-label"><i class="ti ti-trending-up" style="font-size:12px"></i> 전월 대비</div>' +
+        '<div class="trend-kpi-val" style="font-size:17px;color:' + (gpct!==null?(gup?'var(--green)':'var(--red)'):'var(--text-muted)') + '">' +
+          (gpct !== null ? (gup?'▲':'▼') + Math.abs(gpct) + '%' : '-') +
+        '</div>' +
+        '<div class="trend-kpi-sub">' + data[lastIdx].label + ' 기준</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="card g1">' +
+      '<div class="card-head">' +
+        '<div class="card-title"><i class="ti ti-chart-bar"></i>월별 방문자 추이</div>' +
+        '<div style="font-size:11px;color:var(--text-muted)">총 ' + data.length + '개월</div>' +
+      '</div>' +
+      '<div style="position:relative;width:100%;height:340px"><canvas id="cTrend"></canvas></div>' +
     '</div>';
 
   // 차트 색상
@@ -1253,7 +1271,6 @@ function renderTrendSection() {
     return i < fixLen ? '#a09f9a' : '#2b7cd3';
   });
 
-  // 이전 차트 제거
   if (_trendChart) { try { _trendChart.destroy(); } catch(e){} _trendChart = null; }
 
   _trendChart = new Chart(document.getElementById('cTrend'), {
@@ -1322,6 +1339,9 @@ function renderTrendSection() {
   });
 }
 
+// 이름 유지 (저장 후 갱신 호출용)
+function renderTrendSection() { showTrendPage(); }
+
 /* ══════════════════════════════════════
    초기화 — 시트에서 로드 후 최신 월 표시
 ══════════════════════════════════════ */
@@ -1336,7 +1356,6 @@ function renderTrendSection() {
     const keys = sortedKeys();
     buildNav();
     showPage(keys[keys.length - 1]);
-    renderTrendSection();
   } catch(e) {
     document.getElementById('pageContent').innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:65vh;gap:12px">

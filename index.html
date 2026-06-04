@@ -723,26 +723,37 @@ function drawOsComp(d, prev) {
         { label:d.label,    data:currVals, backgroundColor:'rgba(29,158,117,.75)', borderRadius:2 },
       ]},
     options:{ responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:22 } },
       plugins:{
-        legend:{display:false},
+        legend:{
+          display:true,
+          position:'top', align:'end',
+          labels:{ boxWidth:10, boxHeight:10, font:{size:11}, color:'#6b6a66',
+            generateLabels: () => [
+              { text:prev.label, fillStyle:'rgba(43,124,211,.75)', strokeStyle:'transparent' },
+              { text:d.label,    fillStyle:'rgba(29,158,117,.75)', strokeStyle:'transparent' },
+            ]
+          }
+        },
         datalabels:{
-          display: ctx => ctx.datasetIndex <= 1,
-          anchor:'end', align:'end',
+          display: ctx => ctx.datasetIndex <= 1 && ctx.parsed.y > 0,
+          anchor:'end', align:'end', clamp:true,
           color: ctx => ctx.datasetIndex===0 ? '#2b7cd3' : '#1D9E75',
           font:{ size:9, weight:'600' },
           formatter: v => v > 0 ? K(v) : '',
         }
       },
-      scales:{ x:{ticks:{font:{size:10},color:'#a09f9a',maxRotation:0},grid:{display:false}},
-               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+      scales:{
+        x:{ticks:{font:{size:10},color:'#a09f9a',maxRotation:0},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'},
+           grace:'15%'}
+      }}
   }));
 }
 
 /* ── KPI 비교 (총 방문자만) ── */
 function drawKpiComp(d, prev) {
-  const diff    = d.total - prev.total;
-  const diffPct = prev.total > 0 ? ((diff/prev.total)*100).toFixed(1) : null;
-  const labels  = [prev.label, d.label];
+  const labels = [prev.label, d.label];
   regChart('kpi', new Chart(document.getElementById('cKpi'), {
     type:'bar',
     data:{ labels,
@@ -752,12 +763,21 @@ function drawKpiComp(d, prev) {
           borderRadius:5, barPercentage:.5 },
       ]},
     options:{ responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:28 } },
       plugins:{
-        legend:{display:false},
+        legend:{
+          display:true, position:'top', align:'end',
+          labels:{ boxWidth:10, boxHeight:10, font:{size:11}, color:'#6b6a66',
+            generateLabels: () => [
+              { text:prev.label, fillStyle:'rgba(43,124,211,.75)', strokeStyle:'transparent' },
+              { text:d.label,    fillStyle:'rgba(29,158,117,.75)', strokeStyle:'transparent' },
+            ]
+          }
+        },
         datalabels:{
           display: true,
-          anchor:'center', align:'center',
-          color:'#fff',
+          anchor:'end', align:'end', clamp:true,
+          color: ctx => ctx.dataIndex===0 ? '#2b7cd3' : '#1D9E75',
           font:{ size:13, weight:'700' },
           formatter: v => comma(v) + '명',
         }
@@ -766,7 +786,8 @@ function drawKpiComp(d, prev) {
         x:{ ticks:{font:{size:12},color:'#a09f9a'}, grid:{display:false} },
         y:{ ticks:{font:{size:10},color:'#a09f9a',callback:K},
             grid:{color:'rgba(0,0,0,.05)'},
-            min: Math.round(Math.min(prev.total,d.total)*0.8) }
+            min: Math.round(Math.min(prev.total,d.total)*0.85),
+            grace:'15%' }
       }}
   }));
 }
@@ -949,25 +970,34 @@ function drawPageBar(d, prev) {
   dsets.push({ label:d.label, data:currVals,
     backgroundColor:'rgba(29,158,117,.75)', borderRadius:2 });
 
-  // datalabels: 바 위에 숫자 (이번 달만)
-  const barDatasetIdx = prev ? 1 : 0; // 전월 있으면 1번이 당월
   regChart('pageBar', new Chart(document.getElementById('cPageBar'), {
     type:'bar',
     data:{ labels:top.map(p=>p.name), datasets:dsets },
     options:{ responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:22 } },
       plugins:{
-        legend:{display:false},
+        legend:{
+          display:true, position:'top', align:'end',
+          labels:{ boxWidth:10, boxHeight:10, font:{size:11}, color:'#6b6a66',
+            generateLabels: () => {
+              const items = [];
+              if (prev) items.push({ text:prev.label, fillStyle:'rgba(43,124,211,.65)', strokeStyle:'transparent' });
+              items.push({ text:d.label, fillStyle:'rgba(29,158,117,.75)', strokeStyle:'transparent' });
+              return items;
+            }
+          }
+        },
         datalabels:{
-          display: ctx => (ctx.datasetIndex === barDatasetIdx),
-          anchor:'end', align:'end',
-          color:'#1D9E75',
+          display: ctx => ctx.parsed.y > 0,
+          anchor:'end', align:'end', clamp:true,
+          color: ctx => ctx.datasetIndex===0 && prev ? '#2b7cd3' : '#1D9E75',
           font:{ size:10, weight:'700' },
           formatter: v => v > 0 ? K(v) : '',
         }
       },
       scales:{
         x:{ticks:{font:{size:11},color:'#a09f9a',autoSkip:false,maxRotation:25},grid:{display:false}},
-        y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}}
+        y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'},grace:'12%'}
       }}
   }));
 }

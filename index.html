@@ -6,6 +6,7 @@
 <title>소프트힐스 홈페이지 방문 유입 현황</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -164,6 +165,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);padding:10px 22px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* TREND PAGE */
+.page-tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:0}
+.page-tab{padding:12px 20px;font-size:13px;font-weight:500;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.page-tab:hover{color:var(--text-primary)}
+.page-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.page-tab i{font-size:15px}
+.trend-wrap{padding:28px 30px 60px}
+.trend-title{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.trend-subtitle{font-size:12px;color:var(--text-muted);margin-top:4px}
+.trend-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-top:18px}
+.trend-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:6px}
+.trend-card-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.trend-card-title i{font-size:15px;color:var(--text-muted)}
+.trend-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.trend-kpi{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:13px 16px}
+.trend-kpi-label{font-size:11px;color:var(--text-muted);margin-bottom:5px}
+.trend-kpi-val{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.trend-kpi-sub{font-size:11px;margin-top:4px}
+@media(max-width:960px){.trend-kpi-row{grid-template-columns:repeat(2,1fr)}}
+
 /* SPIN */
 @keyframes _spin{to{transform:rotate(360deg)}}
 
@@ -181,9 +202,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
     </div>
     <div class="logo-sub">홈페이지 방문 유입 현황</div>
   </div>
-  <div class="nav-label">월별 리포트</div>
+  <div class="page-tabs">
+    <div class="page-tab active" id="tabReport" onclick="switchMainTab('report')">
+      <i class="ti ti-calendar-month"></i>월별 리포트
+    </div>
+    <div class="page-tab" id="tabTrend" onclick="switchMainTab('trend')">
+      <i class="ti ti-trending-up"></i>방문자 추이
+    </div>
+  </div>
   <div id="navList"></div>
-  <div class="sidebar-footer">
+  <div class="sidebar-footer" id="sidebarFooter">
     <button class="add-btn" onclick="openModal()"><i class="ti ti-plus"></i> 새 월 데이터 추가</button>
   </div>
 </nav>
@@ -438,6 +466,11 @@ function reorderDB() {
 /* ══════════════════════════════════════
    차트
 ══════════════════════════════════════ */
+// chartjs-plugin-datalabels 전역 등록
+Chart.register(ChartDataLabels);
+// 기본값: 모든 차트에서 datalabels 비활성화 (각 차트에서 명시적으로 활성화)
+Chart.defaults.plugins.datalabels.display = false;
+
 const CHARTS = {};
 function regChart(id, c){ CHARTS[id] = c; }
 function clearCharts(){ Object.values(CHARTS).forEach(c=>{ try{c.destroy();}catch(e){} }); for(const k in CHARTS) delete CHARTS[k]; }
@@ -629,18 +662,46 @@ function renderMonth(key) {
 function drawDaily(d, avg) {
   const colors = d.daily.days.map(day => day==='토'?'#4fa8e8':day==='일'?'#e05252':'#2b7cd3');
   const labels = d.daily.dates.map((dt,i) => [String(dt), d.daily.days[i]]);
-  const fs     = d.daily.dates.length <= 17 ? 11 : d.daily.dates.length <= 28 ? 10 : 9;
+  const n      = d.daily.dates.length;
+  const fs     = n <= 17 ? 11 : n <= 28 ? 10 : 9;
+  const lblFs  = n <= 17 ? 10 : n <= 24 ? 8 : 0; // 날짜 많으면 숫자 숨김
   regChart('daily', new Chart(document.getElementById('cDaily'), {
     type: 'bar',
     data: { labels, datasets: [
-      { data: d.daily.v, backgroundColor: colors, borderRadius: 2, barPercentage: .82, categoryPercentage: .9 },
-      { type:'line', data: d.daily.v.map(()=>avg), borderColor:'#ef9f27', borderWidth:1.5, borderDash:[4,3], pointRadius:0, tension:0 }
+      { data: d.daily.v, backgroundColor: colors, borderRadius: 2,
+        barPercentage: .82, categoryPercentage: .9 },
+      // 평균선
+      { type:'line', data: d.daily.v.map(()=>avg),
+        borderColor:'#ef9f27', borderWidth:1.5, borderDash:[4,3], pointRadius:0, tension:0,
+        label:'평균' },
+      // 변동 꺾은선
+      { type:'line', data: d.daily.v,
+        borderColor:'rgba(109,90,224,.75)', borderWidth:2,
+        pointRadius: n <= 17 ? 3 : n <= 24 ? 2 : 1.5,
+        pointBackgroundColor:'rgba(109,90,224,.9)',
+        pointBorderColor:'#fff', pointBorderWidth:1,
+        tension:.35, fill:false, label:'변동' }
     ]},
     options: { responsive:true, maintainAspectRatio:false,
-      plugins: { legend:{display:false}, tooltip:{ callbacks:{
-        title: ctx => { const i=ctx[0].dataIndex; return `${d.year}년 ${d.month}월 ${d.daily.dates[i]}일 (${d.daily.days[i]}요일)`; },
-        label: ctx => ctx.datasetIndex===0 ? ` ${comma(ctx.raw)}명` : ` 평균 ${comma(avg)}명`
-      }}},
+      plugins: {
+        legend:{display:false},
+        tooltip:{ callbacks:{
+          title: ctx => { const i=ctx[0].dataIndex; return `${d.year}년 ${d.month}월 ${d.daily.dates[i]}일 (${d.daily.days[i]}요일)`; },
+          label: ctx => {
+            if (ctx.datasetIndex===0) return ` ${comma(ctx.raw)}명`;
+            if (ctx.datasetIndex===1) return ` 평균 ${comma(avg)}명`;
+            return ` 변동 ${comma(ctx.raw)}명`;
+          }
+        }},
+        // 바 위 숫자 표시
+        datalabels: {
+          display: ctx => ctx.datasetIndex === 0,
+          anchor:'end', align:'end',
+          color: ctx => { const day=d.daily.days[ctx.dataIndex]; return day==='토'?'#4fa8e8':day==='일'?'#e05252':'#6b6a66'; },
+          font:{ size: lblFs, weight:'600' },
+          formatter: v => lblFs > 0 ? K(v) : '',
+        }
+      },
       scales: {
         x: { ticks:{ font:{size:fs}, autoSkip:false, maxRotation:0,
           color: ctx => { const day=d.daily.days[ctx.index]; return day==='토'?'#4fa8e8':day==='일'?'#e05252':'#a09f9a'; }
@@ -672,14 +733,36 @@ function drawOsDonut(d, total) {
 
 /* ── OS 비교 ── */
 function drawOsComp(d, prev) {
+  const prevVals = OS_KEYS.map(k=>prev.os[k]||0);
+  const currVals = OS_KEYS.map(k=>d.os[k]||0);
   regChart('osComp', new Chart(document.getElementById('cOsComp'), {
     type:'bar',
     data:{ labels:['Win','Mac','Android','iOS','Linux','Unknown'],
       datasets:[
-        { label:prev.label, data:OS_KEYS.map(k=>prev.os[k]||0), backgroundColor:'#2b7cd3', borderRadius:2 },
-        { label:d.label,    data:OS_KEYS.map(k=>d.os[k]||0),    backgroundColor:'#1D9E75', borderRadius:2 }
+        { label:prev.label, data:prevVals, backgroundColor:'rgba(43,124,211,.75)', borderRadius:2 },
+        { label:d.label,    data:currVals, backgroundColor:'rgba(29,158,117,.75)', borderRadius:2 },
+        // 전월 꺾은선
+        { type:'line', label:prev.label+'(선)', data:prevVals,
+          borderColor:'#2b7cd3', borderWidth:2, pointRadius:3,
+          pointBackgroundColor:'#2b7cd3', pointBorderColor:'#fff', pointBorderWidth:1,
+          tension:.3, fill:false },
+        // 당월 꺾은선
+        { type:'line', label:d.label+'(선)', data:currVals,
+          borderColor:'#1D9E75', borderWidth:2, pointRadius:3,
+          pointBackgroundColor:'#1D9E75', pointBorderColor:'#fff', pointBorderWidth:1,
+          tension:.3, fill:false },
       ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display: ctx => ctx.datasetIndex <= 1,
+          anchor:'end', align:'end',
+          color: ctx => ctx.datasetIndex===0 ? '#2b7cd3' : '#1D9E75',
+          font:{ size:9, weight:'600' },
+          formatter: v => v > 0 ? K(v) : '',
+        }
+      },
       scales:{ x:{ticks:{font:{size:10},color:'#a09f9a',maxRotation:0},grid:{display:false}},
                y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
   }));
@@ -687,16 +770,40 @@ function drawOsComp(d, prev) {
 
 /* ── KPI 비교 (총 방문자만) ── */
 function drawKpiComp(d, prev) {
+  const allKeys = sortedKeys();
+  // 전체 월 트렌드용 꺾은선 데이터
+  const trendLabels = allKeys.map(k => DB[k].label);
+  const trendVals   = allKeys.map(k => DB[k].total);
   regChart('kpi', new Chart(document.getElementById('cKpi'), {
     type:'bar',
-    data:{ labels:['총 방문자'],
+    data:{ labels:['전월','이번 달'],
       datasets:[
-        { label:prev.label, data:[prev.total], backgroundColor:'#2b7cd3', borderRadius:3 },
-        { label:d.label,    data:[d.total],    backgroundColor:'#1D9E75', borderRadius:3 }
+        { label:'방문자', data:[prev.total, d.total],
+          backgroundColor:['rgba(43,124,211,.7)','rgba(29,158,117,.7)'],
+          borderRadius:4, barPercentage:.5 },
+        // 증감 꺾은선
+        { type:'line', label:'추이', data:[prev.total, d.total],
+          borderColor:'#6d5ae0', borderWidth:2.5,
+          pointRadius:6, pointBackgroundColor:['#2b7cd3','#1D9E75'],
+          pointBorderColor:'#fff', pointBorderWidth:2,
+          tension:0, fill:false },
       ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{ticks:{font:{size:11},color:'#a09f9a'},grid:{display:false}},
-               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display: ctx => ctx.datasetIndex === 0,
+          anchor:'end', align:'end',
+          color: ctx => ctx.dataIndex===0 ? '#2b7cd3' : '#1D9E75',
+          font:{ size:12, weight:'700' },
+          formatter: v => comma(v),
+        }
+      },
+      scales:{
+        x:{ticks:{font:{size:12},color:'#a09f9a'},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'},
+           min: Math.round(Math.min(prev.total,d.total)*0.85) }
+      }}
   }));
 }
 
@@ -867,16 +974,49 @@ function renderInsight(insights) {
 
 /* ── 페이지 바 차트 ── */
 function drawPageBar(d, prev) {
-  const top   = [...d.pages].sort((a,b)=>b.v-a.v).slice(0,8);
+  const top      = [...d.pages].sort((a,b)=>b.v-a.v).slice(0,8);
+  const currVals = top.map(p=>p.v);
+  const prevVals = top.map(p=>{ const f=prev?.pages.find(x=>x.name===p.name); return f?f.v:0; });
   const dsets = [];
-  if (prev) dsets.push({ label:prev.label, data:top.map(p=>{ const f=prev.pages.find(x=>x.name===p.name); return f?f.v:0; }), backgroundColor:'#2b7cd3', borderRadius:2 });
-  dsets.push({ label:d.label, data:top.map(p=>p.v), backgroundColor:'#1D9E75', borderRadius:2 });
+  if (prev) {
+    dsets.push({ label:prev.label, data:prevVals,
+      backgroundColor:'rgba(43,124,211,.65)', borderRadius:2 });
+  }
+  dsets.push({ label:d.label, data:currVals,
+    backgroundColor:'rgba(29,158,117,.75)', borderRadius:2 });
+  // 꺾은선 — 당월
+  dsets.push({ type:'line', label:d.label+'(선)', data:currVals,
+    borderColor:'#1D9E75', borderWidth:2, pointRadius:4,
+    pointBackgroundColor:'#1D9E75', pointBorderColor:'#fff', pointBorderWidth:1.5,
+    tension:.3, fill:false });
+  // 꺾은선 — 전월
+  if (prev) {
+    dsets.push({ type:'line', label:prev.label+'(선)', data:prevVals,
+      borderColor:'#2b7cd3', borderWidth:2, pointRadius:4,
+      pointBackgroundColor:'#2b7cd3', pointBorderColor:'#fff', pointBorderWidth:1.5,
+      tension:.3, fill:false });
+  }
+
+  // datalabels: 바 위에 숫자 (이번 달만)
+  const barDatasetIdx = prev ? 1 : 0; // 전월 있으면 1번이 당월
   regChart('pageBar', new Chart(document.getElementById('cPageBar'), {
     type:'bar',
     data:{ labels:top.map(p=>p.name), datasets:dsets },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:{ticks:{font:{size:11},color:'#a09f9a',autoSkip:false,maxRotation:25},grid:{display:false}},
-               y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}} }}
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display: ctx => (ctx.datasetIndex === barDatasetIdx),
+          anchor:'end', align:'end',
+          color:'#1D9E75',
+          font:{ size:10, weight:'700' },
+          formatter: v => v > 0 ? K(v) : '',
+        }
+      },
+      scales:{
+        x:{ticks:{font:{size:11},color:'#a09f9a',autoSkip:false,maxRotation:25},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#a09f9a',callback:K},grid:{color:'rgba(0,0,0,.05)'}}
+      }}
   }));
 }
 
@@ -1073,6 +1213,178 @@ function showToast(msg, isError=false) {
   t.classList.add('show');
   clearTimeout(t._t);
   t._t = setTimeout(()=>t.classList.remove('show'), isError?5000:3000);
+}
+
+/* ══════════════════════════════════════
+   방문자 추이 탭
+══════════════════════════════════════ */
+const FIXED_TREND = [
+  { key:'2025-07', label:'25년 7월',  total:109   },
+  { key:'2025-08', label:'25년 8월',  total:9824  },
+  { key:'2025-09', label:'25년 9월',  total:9722  },
+  { key:'2025-10', label:'25년 10월', total:9134  },
+  { key:'2025-11', label:'25년 11월', total:9801  },
+  { key:'2025-12', label:'25년 12월', total:17983 },
+  { key:'2026-01', label:'26년 1월',  total:12037 },
+  { key:'2026-02', label:'26년 2월',  total:11137 },
+];
+
+let _currentMainTab = 'report';
+let _trendChart = null;
+
+function switchMainTab(tab) {
+  _currentMainTab = tab;
+  document.getElementById('tabReport').classList.toggle('active', tab === 'report');
+  document.getElementById('tabTrend').classList.toggle('active',  tab === 'trend');
+  document.getElementById('navList').style.display       = tab === 'report' ? '' : 'none';
+  document.getElementById('sidebarFooter').style.display = tab === 'report' ? '' : 'none';
+  if (tab === 'trend') renderTrendPage();
+  else {
+    const keys = sortedKeys();
+    if (keys.length) showPage(currentKey || keys[keys.length - 1]);
+  }
+}
+
+function getTrendData() {
+  const live = sortedKeys()
+    .filter(function(k){ return k >= '2026-03'; })
+    .map(function(k){ return { key:k, label:DB[k].label, total:DB[k].total }; });
+  return FIXED_TREND.concat(live);
+}
+
+function renderTrendPage() {
+  const data   = getTrendData();
+  const fixLen = FIXED_TREND.length;
+  const labels = data.map(function(d){ return d.label; });
+  const vals   = data.map(function(d){ return d.total; });
+  const barColors = data.map(function(_, i){
+    return i < fixLen ? 'rgba(160,159,154,.55)' : 'rgba(43,124,211,.8)';
+  });
+  const ptColors = data.map(function(_, i){
+    return i < fixLen ? '#a09f9a' : '#2b7cd3';
+  });
+
+  const totalAll  = vals.reduce(function(s,v){ return s+v; }, 0);
+  const liveVals  = vals.slice(fixLen);
+  const liveAvg   = liveVals.length ? Math.round(liveVals.reduce(function(s,v){return s+v;},0)/liveVals.length) : 0;
+  const maxVal    = Math.max.apply(null, vals);
+  const maxLabel  = data[vals.indexOf(maxVal)].label;
+  const lastIdx   = vals.length - 1;
+  const gpct      = lastIdx > 0 && vals[lastIdx-1] > 0
+    ? (((vals[lastIdx]-vals[lastIdx-1])/vals[lastIdx-1])*100).toFixed(1) : null;
+  const gcolor    = gpct !== null ? (+gpct >= 0 ? 'var(--green)' : 'var(--red)') : 'var(--text-muted)';
+  const garrow    = gpct !== null ? (+gpct >= 0 ? '▲' : '▼') : '';
+
+  document.getElementById('pageContent').innerHTML =
+    '<div class="trend-wrap">' +
+      '<div class="trend-title">방문자 추이</div>' +
+      '<div class="trend-subtitle" style="margin-bottom:0">' +
+        '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px">' +
+          '<span style="width:10px;height:10px;border-radius:2px;background:rgba(160,159,154,.55);display:inline-block"></span>' +
+          ' 고정 데이터 (25.07~26.02)' +
+        '</span>' +
+        '<span style="display:inline-flex;align-items:center;gap:4px">' +
+          '<span style="width:10px;height:10px;border-radius:2px;background:rgba(43,124,211,.8);display:inline-block"></span>' +
+          ' 실시간 데이터 (26.03~)' +
+        '</span>' +
+      '</div>' +
+      '<div class="trend-kpi-row">' +
+        '<div class="trend-kpi">' +
+          '<div class="trend-kpi-label">누적 총 방문자</div>' +
+          '<div class="trend-kpi-val">' + comma(totalAll) + '</div>' +
+          '<div class="trend-kpi-sub" style="color:var(--text-muted)">' + data[0].label + ' ~ ' + data[lastIdx].label + '</div>' +
+        '</div>' +
+        '<div class="trend-kpi">' +
+          '<div class="trend-kpi-label">최고 방문월</div>' +
+          '<div class="trend-kpi-val" style="font-size:15px">' + maxLabel + '</div>' +
+          '<div class="trend-kpi-sub" style="color:var(--blue)">' + comma(maxVal) + '명</div>' +
+        '</div>' +
+        '<div class="trend-kpi">' +
+          '<div class="trend-kpi-label">실시간 구간 월평균</div>' +
+          '<div class="trend-kpi-val">' + (liveVals.length ? comma(liveAvg) : '-') + '</div>' +
+          '<div class="trend-kpi-sub" style="color:var(--text-muted)">26년 3월 이후</div>' +
+        '</div>' +
+        '<div class="trend-kpi">' +
+          '<div class="trend-kpi-label">전월 대비 증감</div>' +
+          '<div class="trend-kpi-val" style="font-size:15px;color:' + gcolor + '">' + (gpct !== null ? garrow + Math.abs(gpct) + '%' : '-') + '</div>' +
+          '<div class="trend-kpi-sub" style="color:var(--text-muted)">' + data[lastIdx].label + ' 기준</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="trend-card">' +
+        '<div class="trend-card-head">' +
+          '<div class="trend-card-title"><i class="ti ti-chart-bar"></i>월별 방문자 추이 그래프</div>' +
+          '<div style="font-size:11px;color:var(--text-muted)">총 ' + data.length + '개월</div>' +
+        '</div>' +
+        '<div style="position:relative;width:100%;height:340px"><canvas id="cTrend"></canvas></div>' +
+      '</div>' +
+    '</div>';
+
+  if (_trendChart) { try { _trendChart.destroy(); } catch(e){} _trendChart = null; }
+
+  _trendChart = new Chart(document.getElementById('cTrend'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '월 방문자',
+          data: vals,
+          backgroundColor: barColors,
+          borderRadius: 4,
+          barPercentage: .65,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: '추이',
+          data: vals,
+          borderColor: '#2b7cd3',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: ptColors,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          tension: .35,
+          fill: false,
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: function(ctx){ return ctx[0].label; },
+            label: function(ctx){
+              var suffix = (ctx.datasetIndex===0 && ctx.dataIndex>=fixLen) ? ' (실시간)' : '';
+              return ' ' + comma(ctx.raw) + '명' + suffix;
+            }
+          }
+        },
+        datalabels: {
+          display: function(ctx){ return ctx.datasetIndex === 0; },
+          anchor: 'end', align: 'end',
+          color: function(ctx){ return ctx.dataIndex < fixLen ? '#a09f9a' : '#2b7cd3'; },
+          font: { size: 10, weight: '600' },
+          formatter: function(v){ return comma(v); }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font:{size:11}, color:'#a09f9a', maxRotation:35, autoSkip:false },
+          grid:  { display: false }
+        },
+        y: {
+          ticks: { font:{size:10}, color:'#a09f9a', callback: K },
+          grid:  { color: 'rgba(0,0,0,.05)' },
+          min: 0
+        }
+      }
+    }
+  });
 }
 
 /* ══════════════════════════════════════

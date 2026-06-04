@@ -339,11 +339,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Pretendard',sans-s
       <span id="editBannerText"></span>
     </div>
     <div class="fsec">기본 정보</div>
-    <div class="fg2" style="margin-bottom:10px">
+    <div class="fg3" style="margin-bottom:10px">
+      <div class="fgroup">
+        <label class="flabel">연도 선택</label>
+        <select class="finput" id="f-year" onchange="onYearMonthChange()">
+          <option value="">연도</option>
+        </select>
+      </div>
       <div class="fgroup">
         <label class="flabel">월 선택</label>
-        <select class="finput" id="f-month" onchange="onMonthChange()">
-          <option value="">월을 선택하세요</option>
+        <select class="finput" id="f-month" onchange="onYearMonthChange()">
+          <option value="">월</option>
           <option value="1">1월</option>
           <option value="2">2월</option>
           <option value="3">3월</option>
@@ -1167,12 +1173,27 @@ function openModal(editKey) {
     banner.style.display = 'none';
   }
 
+  // 연도 옵션 동적 생성 (현재 연도 ±3년)
+  var yearSel = document.getElementById('f-year');
+  var baseY   = new Date().getFullYear();
+  yearSel.innerHTML = '<option value="">연도</option>';
+  for (var yi = baseY - 1; yi <= baseY + 2; yi++) {
+    var opt = document.createElement('option');
+    opt.value = yi;
+    opt.textContent = yi + '년';
+    yearSel.appendChild(opt);
+  }
+
   // 기본 정보
   if (isEdit) {
+    document.getElementById('f-year').value  = d.year;
     document.getElementById('f-month').value = d.month;
     sv('f-bdays', d.bizDays); sv('f-total', d.total); sv('f-seo', d.seo);
   } else {
-    document.getElementById('f-month').value = '';
+    // 신규: 최신 DB 기준 다음 달 연/월 자동 추천
+    var suggested = suggestNextYearMonth();
+    document.getElementById('f-year').value  = suggested.year;
+    document.getElementById('f-month').value = suggested.month;
     sv('f-bdays',''); sv('f-total',''); sv('f-seo','');
   }
 
@@ -1194,8 +1215,8 @@ function openModal(editKey) {
 
   // 일별 그리드
   const mon = isEdit ? d.month : +document.getElementById('f-month').value;
-  const yr  = isEdit ? d.year  : (mon ? getYearForMonth(mon) : new Date().getFullYear());
-  if (mon) buildDailyGrid(yr, mon);
+  const yr  = isEdit ? d.year  : (+document.getElementById('f-year').value || new Date().getFullYear());
+  if (mon && yr) buildDailyGrid(yr, mon);
   if (isEdit) {
     d.daily.dates.forEach((day,i) => { const el=document.getElementById('dd-'+day); if(el) el.value=d.daily.v[i]||''; });
   }
@@ -1208,26 +1229,24 @@ function closeModal() {
   _editKey = null;
 }
 
-/* ── 연도 자동 계산 ── */
-// DB 기준 또는 편집 key 기준으로 연도 결정
-function getYearForMonth(month) {
+/* ── 다음 달 연/월 자동 추천 ── */
+function suggestNextYearMonth() {
   const keys = sortedKeys();
-  if (!keys.length) return new Date().getFullYear();
-  const lastKey  = keys[keys.length - 1];
+  if (!keys.length) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+  const lastKey = keys[keys.length - 1];
   const [lastY, lastM] = lastKey.split('-').map(Number);
-  // 선택한 월이 최신 월보다 작으면 다음 해, 같거나 크면 같은 해
-  // 단순 규칙: 마지막 월 기준 연도 사용 (12→1 넘어갈 때 +1)
-  if (lastM === 12 && month === 1) return lastY + 1;
-  if (month <= lastM) return lastY + 1;  // 이미 지난 월 선택 시 다음 해
-  return lastY;
+  if (lastM === 12) return { year: lastY + 1, month: 1 };
+  return { year: lastY, month: lastM + 1 };
 }
 
-function onMonthChange() {
-  if (_editKey) return; // 편집 모드에서는 무시
+function onYearMonthChange() {
+  if (_editKey) return;
+  const year  = +document.getElementById('f-year').value;
   const month = +document.getElementById('f-month').value;
-  if (!month) return;
-  const year = getYearForMonth(month);
-  buildDailyGrid(year, month);
+  if (year && month) buildDailyGrid(year, month);
 }
 
 function buildDailyGrid(y, m) {
@@ -1254,9 +1273,9 @@ function saveMonth() {
   // 연도 자동 결정
   const year = _editKey ? DB[_editKey].year : getYearForMonth(month);
 
-  const key  = `${year}-${String(month).padStart(2,'0')}`;
+  const key  = `${finalYear}-${String(month).padStart(2,'0')}`;
   const mnm  = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const days = daysInMonth(year, month);
+  const days = daysInMonth(finalYear, month);
 
   // 편집 모드에서 연도/월이 바뀌었으면 기존 key 삭제
   if (_editKey && _editKey !== key) {
@@ -1270,16 +1289,16 @@ function saveMonth() {
   const mm = String(month).padStart(2,'0');
 
   DB[key] = {
-    label:   `${String(year).slice(2)}년 ${mnm[month-1]}`,
-    year, month,
-    period:  `${year}.${mm}.01 ~ ${mm}.${String(lastNonZero).padStart(2,'0')}`,
+    label:   `${String(finalYear).slice(2)}년 ${mnm[month-1]}`,
+    year: finalYear, month,
+    period:  `${finalYear}.${mm}.01 ~ ${mm}.${String(lastNonZero).padStart(2,'0')}`,
     bizDays: gv('f-bdays'),
     total, seo: gv('f-seo'),
     os: { windows:gv('f-win'), mac:gv('f-mac'), android:gv('f-and'),
           ios:gv('f-ios'), linux:gv('f-linux'), unknown:gv('f-unk') },
     daily: {
       dates: Array.from({length:lastNonZero}, (_,i)=>i+1),
-      days:  Array.from({length:lastNonZero}, (_,i)=>dayName(year,month,i+1)),
+      days:  Array.from({length:lastNonZero}, (_,i)=>dayName(finalYear,month,i+1)),
       v:     allV.slice(0, lastNonZero),
     },
     pages: [

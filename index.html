@@ -732,98 +732,131 @@ function switchTab(group, btn, key) {
 }
 
 /* ══════════════════════════════════════
-   AI 분석 인사이트 생성
+   데이터 기반 인사이트 자동 생성
 ══════════════════════════════════════ */
-const _insightCache = {}; // key별 인사이트 캐시
+const _insightCache = {};
 
-async function generateInsight(key, forceRefresh) {
+function generateInsight(key, forceRefresh) {
   const d    = DB[key];
   const prev = prevOf(key);
   if (!d) return;
 
-  // 캐시 있고 강제 새로고침 아니면 바로 렌더
   if (!forceRefresh && _insightCache[key]) {
     renderInsight(_insightCache[key]);
     return;
   }
 
-  // 로딩 스피너
-  const btn = document.getElementById('insightRefreshBtn');
-  if (btn) btn.classList.add('spinning');
-  document.getElementById('insightBody').innerHTML = `
-    <div class="insight-skeleton">
-      ${[1,2,3,4,5].map(()=>'<div class="insight-skel-row"><div class="insight-skel-num"></div><div class="insight-skel-body"><div class="insight-skel-title"></div><div class="insight-skel-desc"></div></div></div>').join('')}
-    </div>`;
+  const insights = buildInsights(d, prev);
+  _insightCache[key] = insights;
+  renderInsight(insights);
+}
 
-  // 데이터 요약
-  const avgD   = d.bizDays > 0 ? Math.round(d.total / d.bizDays) : 0;
-  const peak   = d.daily.v.length ? Math.max(...d.daily.v) : 0;
-  const peakDay = d.daily.dates[d.daily.v.indexOf(peak)];
-  const osTotal = ['windows','mac','android','ios','linux','unknown'].reduce((s,k)=>s+(d.os[k]||0),0);
-  const topOs  = ['windows','mac','android','ios','linux','unknown']
-    .map(k=>({k, v:d.os[k]||0})).sort((a,b)=>b.v-a.v)[0];
-  const topPage = [...d.pages].sort((a,b)=>b.v-a.v)[0];
-  const mobileTotal = (d.os.android||0) + (d.os.ios||0);
-  const mobilePct = osTotal > 0 ? Math.round(mobileTotal/osTotal*100) : 0;
+function buildInsights(d, prev) {
+  const insights = [];
+  const avgD     = d.bizDays > 0 ? Math.round(d.total / d.bizDays) : 0;
+  const osTotal  = ['windows','mac','android','ios','linux','unknown'].reduce((s,k) => s + (d.os[k]||0), 0);
+  const mobile   = (d.os.android||0) + (d.os.ios||0);
+  const mobilePct = osTotal > 0 ? Math.round(mobile / osTotal * 100) : 0;
+  const sortedPages = [...d.pages].sort((a,b) => b.v - a.v);
+  const topPage  = sortedPages[0];
+  const adPages  = d.pages.filter(p => p.g === 'ad');
+  const crmPages = d.pages.filter(p => p.g === 'crm');
+  const adTotal  = adPages.reduce((s,p) => s + p.v, 0);
+  const crmTotal = crmPages.reduce((s,p) => s + p.v, 0);
+  const peak     = d.daily.v.length ? Math.max(...d.daily.v) : 0;
+  const peakIdx  = d.daily.v.indexOf(peak);
+  const peakDay  = d.daily.dates[peakIdx] || '-';
+  const peakDayNm= d.daily.days[peakIdx]  || '';
 
-  const prevInfo = prev ? `전월(${prev.label}) 대비 총 방문자 ${prev.total > d.total ? '감소' : '증가'} (${prev.total}→${d.total}, ${((d.total-prev.total)/prev.total*100).toFixed(1)}%), 전월 SEO ${prev.seo}, 전월 상위 페이지: ${[...prev.pages].sort((a,b)=>b.v-a.v)[0]?.name}(${[...prev.pages].sort((a,b)=>b.v-a.v)[0]?.v}회)` : '전월 데이터 없음';
-
-  const prompt = `당신은 B2B 소프트웨어 회사 소프트힐스의 홈페이지 방문 분석 전문가입니다.
-아래 ${d.label} 데이터를 분석해서 경영진 보고용 인사이트를 두괄식으로 5개 작성해주세요.
-
-[데이터]
-- 기간: ${d.period} (영업일 ${d.bizDays}일)
-- 총 방문자: ${d.total}명 / 일평균: ${avgD}명
-- 네이버 SEO 지수: ${d.seo}
-- 피크일: ${d.month}월 ${peakDay}일 (${peak}명)
-- OS 분포: Windows ${d.os.windows}, Mac ${d.os.mac}, Android ${d.os.android}, iOS ${d.os.ios}, Linux ${d.os.linux}, Unknown ${d.os.unknown}
-- 모바일 비율: ${mobilePct}% (Android+iOS)
-- 최다 방문 페이지: ${topPage?.name} (${topPage?.v}회)
-- 상위 5개 페이지: ${[...d.pages].sort((a,b)=>b.v-a.v).slice(0,5).map(p=>p.name+'('+p.v+')').join(', ')}
-- ${prevInfo}
-
-[작성 규칙]
-- 각 인사이트는 반드시 핵심 결론을 첫 문장에 (두괄식)
-- 첫 문장: 굵게 표시될 제목 (20자 이내, 핵심 메시지)
-- 두 번째 문장: 수치 근거 포함한 설명 (40자 이내)
-- 긍정/부정/기회 균형있게
-- 마케팅/CRM 관점 포함
-
-반드시 아래 JSON 형식으로만 응답하세요 (마크다운 없이):
-{"insights":[{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"},{"title":"제목","desc":"설명"}]}`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+  // 1. 총 방문자 전월 비교
+  if (prev && prev.total > 0) {
+    const diff = d.total - prev.total;
+    const pct  = ((diff / prev.total) * 100).toFixed(1);
+    const up   = diff >= 0;
+    insights.push({
+      tag:   up ? 'pos' : 'neg',
+      title: up
+        ? `전월 대비 방문자 ${pct}% 증가`
+        : `전월 대비 방문자 ${Math.abs(pct)}% 감소`,
+      desc:  `${prev.label} ${comma(prev.total)}명 → ${d.label} ${comma(d.total)}명 (${up ? '+' : ''}${comma(diff)}명), 일평균 ${comma(avgD)}명 수준.`,
     });
-    const data = await res.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    _insightCache[key] = parsed.insights;
-    renderInsight(parsed.insights);
-  } catch(e) {
-    document.getElementById('insightBody').innerHTML =
-      `<div style="font-size:13px;color:#8892a4;padding:8px 0">인사이트를 생성하지 못했습니다. 새로고침을 눌러주세요.</div>`;
-  } finally {
-    if (btn) btn.classList.remove('spinning');
+  } else {
+    insights.push({
+      tag:   'neu',
+      title: `이번 달 총 방문자 ${comma(d.total)}명`,
+      desc:  `영업일 ${d.bizDays}일 기준 일평균 ${comma(avgD)}명 방문. 전월 비교 데이터 없음.`,
+    });
   }
+
+  // 2. SEO 지수 변화
+  if (prev && prev.seo > 0 && d.seo > 0) {
+    const seoDiff = d.seo - prev.seo;
+    const seoPct  = ((seoDiff / prev.seo) * 100).toFixed(1);
+    const up      = seoDiff >= 0;
+    insights.push({
+      tag:   up ? 'pos' : 'neg',
+      title: up
+        ? `네이버 SEO 지수 ${seoPct}% 상승`
+        : `네이버 SEO 지수 ${Math.abs(seoPct)}% 하락`,
+      desc:  `전월 ${comma(prev.seo)} → 이번 달 ${comma(d.seo)}으로 ${up ? '개선' : '하락'}. ${up ? '검색 유입 확대 추세로 콘텐츠 전략 유효.' : '검색 노출 점검 및 키워드 보강이 필요한 시점.'}`,
+    });
+  } else if (d.seo > 0) {
+    insights.push({
+      tag:   'neu',
+      title: `네이버 SEO 지수 ${comma(d.seo)}`,
+      desc:  `이번 달 SEO 지수 ${comma(d.seo)} 기록. 지속적인 콘텐츠 최적화로 검색 노출 확대 필요.`,
+    });
+  }
+
+  // 3. 모바일 접속 비율
+  if (osTotal > 0) {
+    const pcPct = 100 - mobilePct;
+    insights.push({
+      tag:   mobilePct >= 40 ? 'warn' : 'neu',
+      title: `모바일 접속 비율 ${mobilePct}%`,
+      desc:  `전체 ${comma(osTotal)}명 중 모바일(Android+iOS) ${comma(mobile)}명(${mobilePct}%), PC ${pcPct}%. ${mobilePct >= 40 ? '모바일 UX 최적화가 전환율에 직결.' : 'PC 중심 접속으로 B2B 탐색 패턴 확인.'}`,
+    });
+  }
+
+  // 4. 최다 방문 페이지 & CRM 유입
+  if (topPage) {
+    const crmTop = [...crmPages].sort((a,b) => b.v - a.v)[0];
+    insights.push({
+      tag:   'pos',
+      title: `'${topPage.name}' 최다 유입 ${comma(topPage.v)}회`,
+      desc:  `광고홍보 ${comma(adTotal)}회 / CRM ${comma(crmTotal)}회 유입.${crmTop ? ` CRM 최다는 '${crmTop.name}'(${comma(crmTop.v)}회)로 제품 관심도 반영.` : ''}`,
+    });
+  }
+
+  // 5. 피크일 & 주간 패턴
+  if (peak > 0 && avgD > 0) {
+    const ratio  = (peak / avgD).toFixed(1);
+    const weCount = d.daily.days.filter(x => x === '토' || x === '일').length;
+    const weV    = d.daily.v.filter((_,i) => d.daily.days[i]==='토'||d.daily.days[i]==='일');
+    const weAvg  = weCount > 0 ? Math.round(weV.reduce((s,v)=>s+v,0)/weCount) : 0;
+    const wdAvg  = d.bizDays > 0
+      ? Math.round((d.daily.v.reduce((s,v)=>s+v,0) - weV.reduce((s,v)=>s+v,0)) / d.bizDays)
+      : 0;
+    insights.push({
+      tag:   'neu',
+      title: `피크일 ${d.month}/${peakDay}(${peakDayNm}) ${comma(peak)}명`,
+      desc:  `일평균 대비 ${ratio}배 수준. 평일 평균 ${comma(wdAvg)}명 vs 주말 평균 ${comma(weAvg)}명으로 ${wdAvg > weAvg ? '평일 중심' : '주말 접속'} 패턴.`,
+    });
+  }
+
+  return insights.slice(0, 5);
 }
 
 function renderInsight(insights) {
   if (!insights?.length) return;
-  const colors = ['n1','n2','n3','n4','n5'];
+  // tag: pos=녹색, neg=적색, warn=주황, neu=파랑
+  const tagClass = { pos:'n3', neg:'n5', warn:'n4', neu:'n1' };
+  const numLabels = ['①','②','③','④','⑤'];
   document.getElementById('insightBody').innerHTML = `
     <div class="insight-list">
       ${insights.map((it, i) => `
         <div class="insight-item">
-          <div class="insight-num ${colors[i]||'n1'}">${i+1}</div>
+          <div class="insight-num ${tagClass[it.tag]||'n1'}">${numLabels[i]||i+1}</div>
           <div class="insight-body">
             <strong>${it.title}</strong>
             <span>${it.desc}</span>

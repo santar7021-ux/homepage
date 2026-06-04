@@ -1175,9 +1175,8 @@ function openModal(editKey) {
 
   // 연도 옵션 동적 생성 (현재 연도 ±3년)
   var yearSel = document.getElementById('f-year');
-  var baseY   = new Date().getFullYear();
   yearSel.innerHTML = '<option value="">연도</option>';
-  for (var yi = baseY - 1; yi <= baseY + 2; yi++) {
+  for (var yi = 2024; yi <= 2035; yi++) {
     var opt = document.createElement('option');
     opt.value = yi;
     opt.textContent = yi + '년';
